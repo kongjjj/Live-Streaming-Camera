@@ -12,11 +12,11 @@ Live Streaming Camera
 
 ## 更多可能加入功能
 
+- ❌ 錄影影片儲存到手機記憶體
+- ❌ 拍攝照片
 - ❌ 
-- ❌
-- ❌
 
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布 .apk 檔案。
 
-可以在手機上開啟 GitHub 發行頁面,下載 .apk 檔案並安裝。
+可以在手機上開啟 GitHub 發行頁面，下載 .apk 檔案並安裝。
