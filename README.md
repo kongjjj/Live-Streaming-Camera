@@ -5,10 +5,10 @@ Live Streaming Camera
 
 ## 功能
 
-- ✅ RTMP 推流直播
-- ✅ SRT 推流直播
+- ✅ RTMP 推流直播,Twitch 直接推流。
+- ✅ SRT 推流直播。
 - ✅ Twitch 聊天室，直播人數，直播時間。
-- ✅ Focus on tap
+- ✅ 藍牙耳機連線。
 
 See [StreamPack](https://github.com/ThibaultBee/StreamPack) for more settings and information.
 
