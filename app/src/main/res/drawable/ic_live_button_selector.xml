@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 選中狀態（正在推流）顯示停止圖示 -->
+    <item android:drawable="@drawable/ic_stop_square_white" android:state_checked="true" />
+    <!-- 未選中狀態（未推流）顯示播放圖示 -->
+    <item android:drawable="@drawable/ic_play_white" android:state_checked="false" />
+</selector>
