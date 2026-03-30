@@ -1,0 +1,190 @@
+<!-- arrays.xml -->
+<resources>
+    <string-array name="FpsEntries">
+        <item>15</item>
+        <item>20</item>
+        <item>24</item>
+        <item>25</item>
+        <item>30</item>
+        <item>48</item>
+        <item>50</item>
+        <item>60</item>
+    </string-array>
+    <string-array name="AudioChannelConfigEntries">
+        <item>單聲道</item>
+        <item>立體聲</item>
+    </string-array>
+    <string-array name="AudioChannelConfigEntryValues">
+        <item>4</item>  <!-- CHANNEL_IN_MONO -->
+        <item>12</item> <!-- CHANNEL_IN_STEREO -->
+    </string-array>
+    <string-array name="AudioBitrateEntryValues">
+        <item>32000</item>
+        <item>64000</item>
+        <item>128000</item>
+        <item>256000</item>
+    </string-array>
+    <string-array name="AudioSourceTypeEntries">
+        <item>麥克風</item>
+        <item>麥克風(語音辨識)</item>
+        <item>麥克風(攝影機伴音)</item>
+    </string-array>
+    <string-array name="AudioSourceTypeEntryValues">
+        <item>1</item>  <!-- MIC -->
+        <item>2</item>  <!-- VOICE_RECOGNITION -->
+        <item>5</item>  <!-- CAMCORDER -->
+    </string-array>
+    <string-array name="endpoint_type_entries">
+        <item>SRT</item>
+        <item>RTMP</item>
+    </string-array>
+    <string-array name="endpoint_type_values">
+        <item>srt</item>
+        <item>rtmp</item>
+    </string-array>
+    <!-- 音訊採樣率選項 -->
+    <string-array name="audio_sample_rate_entries">
+        <item>8000 Hz</item>
+        <item>16000 Hz</item>
+        <item>22050 Hz</item>
+        <item>44100 Hz</item>
+        <item>48000 Hz</item>
+    </string-array>
+    <string-array name="audio_sample_rate_values">
+        <item>8000</item>
+        <item>16000</item>
+        <item>22050</item>
+        <item>44100</item>
+        <item>48000</item>
+    </string-array>
+
+    <!-- 音訊位元率選項（單位：bps） -->
+    <string-array name="audio_bitrate_entries">
+        <item>32 kbps</item>
+        <item>64 kbps</item>
+        <item>96 kbps</item>
+        <item>128 kbps</item>
+        <item>192 kbps</item>
+        <item>256 kbps</item>
+    </string-array>
+    <string-array name="audio_bitrate_values">
+        <item>32000</item>
+        <item>64000</item>
+        <item>96000</item>
+        <item>128000</item>
+        <item>192000</item>
+        <item>256000</item>
+    </string-array>
+    <!-- 音訊編碼器選項 -->
+    <string-array name="audio_encoder_entries">
+        <item>AAC</item>
+        <item>Opus</item>
+    </string-array>
+    <string-array name="audio_encoder_values">
+        <item>aac</item>
+        <item>opus</item>
+    </string-array>
+
+    <!-- Byte Format 選項（AudioFormat 對應值） -->
+    <string-array name="audio_byte_format_entries">
+        <item>8-bit</item>
+        <item>16-bit</item>
+        <item>32-bit float</item>
+    </string-array>
+    <string-array name="audio_byte_format_values">
+        <item>3</item>   <!-- AudioFormat.ENCODING_PCM_8BIT -->
+        <item>2</item>   <!-- AudioFormat.ENCODING_PCM_16BIT -->
+        <item>4</item>   <!-- AudioFormat.ENCODING_PCM_FLOAT -->
+    </string-array>
+
+    <!-- AAC 檔次選項 -->
+    <string-array name="aac_profile_entries">
+        <item>LC (低複雜度)</item>
+        <item>HE (高效率)</item>
+        <item>HEv2 (高效率v2)</item>
+    </string-array>
+    <string-array name="aac_profile_values">
+        <item>2</item>   <!-- MediaCodecInfo.CodecProfileLevel.AACObjectLC -->
+        <item>5</item>   <!-- AACObjectHE -->
+        <item>29</item>  <!-- AACObjectHE_PS -->
+    </string-array>
+
+    <!-- Opus 檔次選項（簡化版） -->
+    <string-array name="opus_profile_entries">
+        <item>VoIP (語音)</item>
+        <item>Audio (音樂)</item>
+        <item>低延遲</item>
+    </string-array>
+    <string-array name="opus_profile_values">
+        <item>voip</item>
+        <item>audio</item>
+        <item>lowdelay</item>
+    </string-array>
+    <!-- 影像 Profile 選項 -->
+    <string-array name="video_profile_entries">
+        <item>Baseline</item>
+        <item>Main</item>
+        <item>High</item>
+    </string-array>
+    <string-array name="video_profile_values">
+        <item>baseline</item>
+        <item>main</item>
+        <item>high</item>
+    </string-array>
+    <!-- 影像解析度選項（顯示文字） -->
+    <string-array name="video_resolution_entries">
+        <item>640 x 360 (360p)</item>
+        <item>854 x 480 (480p)</item>
+        <item>1280 x 720 (720p)</item>
+        <item>1920 x 1080 (1080p)</item>
+        <item>2560 x 1440 (1440p)</item>
+        <item>3840 x 2160 (4K)</item>
+    </string-array>
+
+    <!-- 影像解析度選項（實際值，格式 "宽x高"） -->
+    <string-array name="video_resolution_values">
+        <item>640x360</item>
+        <item>854x480</item>
+        <item>1280x720</item>
+        <item>1920x1080</item>
+        <item>2560x1440</item>
+        <item>3840x2160</item>
+    </string-array>
+    <!-- 影像 Level 選項（僅供 H.264 範例） -->
+    <string-array name="video_level_entries">
+        <item>3.1</item>
+        <item>4.0</item>
+        <item>4.1</item>
+        <item>5.0</item>
+    </string-array>
+    <string-array name="video_level_values">
+        <item>3.1</item>
+        <item>4.0</item>
+        <item>4.1</item>
+        <item>5.0</item>
+    </string-array>
+    <!-- 通用音訊檔次標題（用於切換顯示） -->
+    <string-array name="audio_profile_titles">
+        <item>AAC 檔次</item>
+        <item>Opus 檔次</item>
+    </string-array>
+    <!-- 位元率演算法選項 -->
+    <string-array name="srt_regulator_entries">
+        <item>Moblin (快速反應)</item>
+        <item>Moblin (穩定)</item>
+        <item>Belabox (平衡)</item>
+    </string-array>
+    <string-array name="srt_regulator_values">
+        <item>MOBLIN_FAST</item>
+        <item>MOBLIN_SLOW</item>
+        <item>BELABOX</item>
+    </string-array>
+    <string-array name="url_choice_entries">
+        <item>URL 1</item>
+        <item>URL 2</item>
+    </string-array>
+    <string-array name="url_choice_values">
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+</resources>
