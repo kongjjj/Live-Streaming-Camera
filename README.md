@@ -5,10 +5,10 @@ Live Streaming Camera
 
 ## 功能
 
-- [X] RTMP live streaming
-- [x] SRT live streaming
-- [x] Zoom on pinch
-- [x] Focus on tap
+- ✅ RTMP live streaming
+- ✅ SRT live streaming
+- ✅ Zoom on pinch
+- ✅ Focus on tap
 
 See [StreamPack](https://github.com/ThibaultBee/StreamPack) for more settings and information.
 
