@@ -5,7 +5,7 @@ Live Streaming Camera
 
 ## 功能
 
-- [x] RTMP live streaming
+- [X] RTMP live streaming
 - [x] SRT live streaming
 - [x] Zoom on pinch
 - [x] Focus on tap
