@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory app:title="Twitch 頻道設定">
+    <!-- 頻道名稱 -->
+    <EditTextPreference
+        android:key="twitch_channel"
+        android:title="Twitch 頻道名稱"
+        android:summary="輸入您要連線的頻道"
+        android:defaultValue="yourchannel"
+        app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+    <PreferenceCategory app:title="字型設定">
+    <!-- 字型大小滑桿 (12sp - 24sp) -->
+    <SeekBarPreference
+        android:key="chat_font_size"
+        android:title="聊天字型大小"
+        android:defaultValue="12"
+        app:min="12"
+        android:max="24"
+        android:stepSize="1"
+        app:showSeekBarValue="true"
+        app:useSimpleSummaryProvider="true" />
+
+    <!-- 字型陰影開關 -->
+    <SwitchPreference
+        android:key="chat_text_shadow_enabled"
+        android:title="聊天文字陰影"
+        android:summary="為聊天文字加上陰影，提高可讀性"
+        android:defaultValue="true" />
+
+    <!-- 陰影深度（半徑） -->
+    <SeekBarPreference
+        android:key="chat_text_shadow_radius"
+        android:title="陰影深度"
+        android:defaultValue="2"
+        app:min="0"
+        android:max="8"
+        android:stepSize="1"
+        app:showSeekBarValue="true"
+        app:useSimpleSummaryProvider="true" />
+
+    <!-- 陰影偏移距離 -->
+    <SeekBarPreference
+        android:key="chat_text_shadow_distance"
+        android:title="陰影偏移"
+        android:defaultValue="1"
+        app:min="0"
+        android:max="5"
+        android:stepSize="1"
+        app:showSeekBarValue="true"
+        app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+    <PreferenceCategory>
+    <!-- 載入歷史開關 -->
+    <SwitchPreference
+        android:key="load_message_history"
+        android:title="載入聊天歷史"
+        android:summary="連線時自動載入最近訊息"
+        android:defaultValue="true" />
+
+    <!-- 斷線重連後載入歷史開關 -->
+    <SwitchPreference
+        android:key="load_message_history_on_reconnect"
+        android:title="斷線重連後載入歷史"
+        android:summary="重連時自動補回錯過的訊息"
+        android:defaultValue="true" />
+    </PreferenceCategory>
+    <!-- 清除歷史按鈕 -->
+    <Preference
+        android:key="clear_chat_history"
+        android:title="清除聊天歷史"
+        android:summary="清除所有已儲存的聊天記錄" />
+
+</PreferenceScreen>

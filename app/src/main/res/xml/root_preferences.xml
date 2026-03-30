@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- 頂部空白 40dp -->
+    <Preference
+        android:layout="@layout/preference_spacer"
+        android:selectable="false" />
+
+    <!-- 自訂「設定」標題（加大字體、右移50dp） -->
+    <Preference
+        android:layout="@layout/preference_custom_title"
+        android:selectable="false" />
+
+    <!-- 影像設定區塊 -->
+    <PreferenceCategory app:title="@string/video">
+        <PreferenceCategory
+            app:key="@string/video_settings_key"
+            app:title="@string/settings">
+
+            <!-- 解析度選擇 -->
+            <ListPreference
+                app:defaultValue="@string/default_video_resolution"
+                app:entries="@array/video_resolution_entries"
+                app:entryValues="@array/video_resolution_values"
+                app:key="@string/video_resolution_key"
+                app:title="@string/video_resolution"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 影格率選擇 -->
+            <ListPreference
+                app:defaultValue="@string/default_fps"
+                app:entries="@array/FpsEntries"
+                app:entryValues="@array/FpsEntries"
+                app:key="@string/video_fps_key"
+                app:title="@string/video_fps"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 影像位元率滑桿 (單位 kbps) -->
+            <SeekBarPreference
+                android:max="10000"
+                app:defaultValue="@string/default_video_bitrate"
+                app:key="@string/video_bitrate_key"
+                app:min="500"
+                app:showSeekBarValue="true"
+                app:title="@string/video_bitrate"
+                app:seekBarIncrement="500"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 編碼檔次 (Profile) -->
+            <ListPreference
+                app:defaultValue="baseline"
+                app:entries="@array/video_profile_entries"
+                app:entryValues="@array/video_profile_values"
+                app:key="@string/video_profile_key"
+                app:title="@string/video_profile"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 編碼級別 (Level) -->
+            <ListPreference
+                app:defaultValue="3.1"
+                app:entries="@array/video_level_entries"
+                app:entryValues="@array/video_level_values"
+                app:key="@string/video_level_key"
+                app:title="@string/video_level"
+                app:useSimpleSummaryProvider="true" />
+        </PreferenceCategory>
+    </PreferenceCategory>
+
+    <!-- 音訊設定區塊 -->
+    <PreferenceCategory app:title="@string/audio">
+        <SwitchPreference
+            android:defaultValue="true"
+            app:enabled="false"
+            app:key="@string/audio_enable_key"
+            app:title="@string/audio_enable" />
+
+        <PreferenceCategory
+            app:key="@string/audio_settings_key"
+            app:title="@string/settings">
+
+            <!-- 音訊編碼器選擇 -->
+            <ListPreference
+                app:defaultValue="aac"
+                app:entries="@array/audio_encoder_entries"
+                app:entryValues="@array/audio_encoder_values"
+                app:key="@string/audio_encoder_key"
+                app:title="@string/audio_encoder_title"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 音訊採樣率選擇 -->
+            <ListPreference
+                app:defaultValue="44100"
+                app:entries="@array/audio_sample_rate_entries"
+                app:entryValues="@array/audio_sample_rate_values"
+                app:key="@string/audio_sample_rate_key"
+                app:title="@string/audio_sample_rate"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 音訊位元率選擇 -->
+            <ListPreference
+                app:defaultValue="128000"
+                app:entries="@array/audio_bitrate_entries"
+                app:entryValues="@array/audio_bitrate_values"
+                app:key="@string/audio_bitrate_key"
+                app:title="@string/audio_bitrate"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- Byte Format 選擇 -->
+            <ListPreference
+                app:defaultValue="2"
+                app:entries="@array/audio_byte_format_entries"
+                app:entryValues="@array/audio_byte_format_values"
+                app:key="@string/audio_byte_format_key"
+                app:title="@string/audio_byte_format_title"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 音訊檔次 (Profile) 僅供 AAC 使用 -->
+            <ListPreference
+                app:defaultValue="2"
+                app:entries="@array/aac_profile_entries"
+                app:entryValues="@array/aac_profile_values"
+                app:key="@string/audio_profile_key"
+                app:title="@string/audio_profile_title"
+                app:useSimpleSummaryProvider="true" />
+        </PreferenceCategory>
+    </PreferenceCategory>
+
+    <!-- 端點類型與伺服器設定 -->
+    <PreferenceCategory app:title="@string/endpoint">
+        <!-- 端點類型選擇 (SRT / RTMP) -->
+        <ListPreference
+            app:defaultValue="rtmp"
+            app:entries="@array/endpoint_type_entries"
+            app:entryValues="@array/endpoint_type_values"
+            app:key="@string/endpoint_type_key"
+            app:title="@string/endpoint_type"
+            app:useSimpleSummaryProvider="true" />
+
+        <!-- SRT 伺服器設定 -->
+        <PreferenceCategory
+            app:key="@string/srt_server_key"
+            app:title="@string/srt_server">
+
+            <!-- 選擇 SRT URL -->
+            <ListPreference
+                app:defaultValue="1"
+                app:entries="@array/url_choice_entries"
+                app:entryValues="@array/url_choice_values"
+                app:key="selected_srt_url"
+                app:title="選擇 SRT URL"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- SRT 完整 URL 1 (保留原有 key) -->
+            <EditTextPreference
+                app:defaultValue="srt://your-server.com:9998/?streamid=publish:streamKey"
+                app:key="srt_full_url_key"
+                app:title="SRT 完整 URL 1"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- SRT 完整 URL 2 (新增) -->
+            <EditTextPreference
+                app:defaultValue="srt://your-server.com:9998/?streamid=publish:streamKey2"
+                app:key="srt_full_url_2_key"
+                app:title="SRT 完整 URL 2"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- SRT 延遲 (ms) -->
+            <EditTextPreference
+                app:defaultValue="1000"
+                app:key="srt_latency"
+                app:title="SRT 延遲 (ms)"
+                app:useSimpleSummaryProvider="true"
+                app:summary="將附加到 URL 的 latency 參數" />
+
+            <!-- 調節器開關 -->
+            <SwitchPreference
+                app:defaultValue="false"
+                app:key="srt_regulator_enabled"
+                app:title="啟用位元率調節器"
+                app:summary="根據網路狀況動態調整影像位元率" />
+
+            <!-- 目標位元率 (kb/s) - 使用自訂樣式 -->
+            <com.kongjjj.livestreamingcamera.CustomSeekBarPreference
+                android:max="20000"
+                app:defaultValue="5000"
+                app:key="srt_video_target_bitrate"
+                app:min="500"
+                app:showSeekBarValue="true"
+                app:title="目標位元率 (kb/s)"
+                app:seekBarIncrement="500"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 最小位元率 (kb/s) - 使用自訂樣式 -->
+            <com.kongjjj.livestreamingcamera.CustomSeekBarPreference
+                android:max="5000"
+                app:defaultValue="500"
+                app:key="srt_video_min_bitrate"
+                app:min="100"
+                app:showSeekBarValue="true"
+                app:title="最小位元率 (kb/s)"
+                app:seekBarIncrement="100"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- 演算法選擇 -->
+            <ListPreference
+                app:defaultValue="MOBLIN_FAST"
+                app:entries="@array/srt_regulator_entries"
+                app:entryValues="@array/srt_regulator_values"
+                app:key="srt_regulator_mode"
+                app:title="位元率演算法"
+                app:summary="選擇適應網路波動的演算法"
+                app:useSimpleSummaryProvider="true" />
+
+        </PreferenceCategory>
+
+        <!-- RTMP 伺服器設定 -->
+        <PreferenceCategory
+            app:key="@string/rtmp_server_key"
+            app:title="@string/rtmp_server">
+
+            <!-- 選擇 RTMP URL -->
+            <ListPreference
+                app:defaultValue="1"
+                app:entries="@array/url_choice_entries"
+                app:entryValues="@array/url_choice_values"
+                app:key="selected_rtmp_url"
+                app:title="選擇 RTMP URL"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- RTMP 完整 URL 1 (保留原有 key) -->
+            <EditTextPreference
+                app:defaultValue="@string/default_rtmp_url"
+                app:key="@string/rtmp_server_url_key"
+                app:title="RTMP 完整 URL 1"
+                app:useSimpleSummaryProvider="true" />
+
+            <!-- RTMP 完整 URL 2 (新增) -->
+            <EditTextPreference
+                app:defaultValue="@string/default_rtmp_url"
+                app:key="rtmp_server_url_2_key"
+                app:title="RTMP 完整 URL 2"
+                app:useSimpleSummaryProvider="true" />
+
+        </PreferenceCategory>
+
+        <!-- 檔案錄製端點 -->
+        <PreferenceCategory
+            app:key="@string/file_endpoint_key"
+            app:title="@string/file">
+
+            <EditTextPreference
+                app:defaultValue="@string/default_file_name"
+                app:key="@string/file_name_key"
+                app:title="@string/file_name"
+                app:useSimpleSummaryProvider="true" />
+        </PreferenceCategory>
+    </PreferenceCategory>
+    <PreferenceCategory app:title="畫面顯示">
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="show_stats_overlay"
+            app:title="SRT顯示串流統計"
+            app:summary="在畫面左上角顯示即時位元率、RTT 等資訊" />
+    </PreferenceCategory>
+    <!-- 背景服務設定區塊 -->
+    <PreferenceCategory app:title="背景運行">
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="background_service_enabled"
+            app:title="常駐背景服務"
+            app:summary="開啟後應用將在背景持續運行，通知欄會顯示圖示" />
+    </PreferenceCategory>
+
+    <!-- 底部 70dp 空白區域 -->
+    <Preference
+        android:layout="@layout/preference_spacer"
+        android:selectable="false" />
+
+</PreferenceScreen>

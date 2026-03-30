@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- USB Camera usually uses class 239 (MISC) and subclass 2 (COMMON) -->
+    <usb-device class="239" subclass="2" protocol="1" />
+    <usb-device class="14" /> <!-- Video class -->
+</resources>

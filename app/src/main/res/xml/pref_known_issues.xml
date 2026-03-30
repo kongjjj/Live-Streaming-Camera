@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.35">
+
+        <Preference
+            android:selectable="false"
+            android:title="1. 新增左下角後鏡頭選擇按鈕，如沒顯示有鏡頭，即表示手機鏡頭不支援。"
+            android:summary="如果按鈕按下畫面停止，表示該鏡頭不支援畫面擷取，不可用來直播，按下會斷線。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="2. RTMP URL可直接輸入Twitch RTMP URL (rtmp://live.twitch.tv/app/live_...)直播。"
+            android:summary="Android 16 版本RTMP不能直接直播到Twitch。" />
+
+    </PreferenceCategory>
+    <PreferenceCategory android:title="說明">
+
+        <Preference
+            android:selectable="false"
+            android:title="1. 在某些手機（特別是華為、小米、三星）上，系統可能會有更激進的省電策略（Battery Optimization）。如果修改後依然斷線，請嘗試以下操作："
+            android:summary="- 在手機設定中，將此 App 的 「電池最佳化」 設定為 「不限制」。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="2. 聊天室可調字型大小及陰影。"
+            android:summary="- 聊天室訊息中的連結可按下及彈出瀏覽器。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="3. 自拍時，只有預覽畫面是鏡像。"
+            android:summary="- 輸出直播的畫面是正常，不會左右鏡像的。" />
+
+
+
+    </PreferenceCategory>
+    <PreferenceCategory android:title="已知問題">
+
+        <Preference
+            android:selectable="false"
+            android:title="1. OPUS 音訊格式選項未有反應。"
+            android:summary="目前 Opus 編碼器在部分裝置上無法正常運作。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="2. Android 16 版本不能使用白平衡，按鈕無反應。"
+            android:summary="此為系統限制，後續版本將嘗試修復。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="3. Android 16 版本RTMP不能直接直播到Twitch。"
+            android:summary="問題不明，後續版本將嘗試修復。" />
+
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
