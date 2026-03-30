@@ -1,6 +1,6 @@
 Live Streaming Camera
 
-使用 StreamPack boilerplate 作底層製作的直播程式。
+使用 StreamPack boilerplate 作底層製作的Android直播程式。
 
 An example RTMP or SRT live streaming application that demonstrates how to
 use [StreamPack](https://github.com/ThibaultBee/StreamPack). In just 5 minutes, you will be able to
