@@ -5,9 +5,9 @@ Live Streaming Camera
 
 ## 功能
 
-- ✅ RTMP live streaming
-- ✅ SRT live streaming
-- ✅ Zoom on pinch
+- ✅ RTMP 推流直播
+- ✅ SRT 推流直播
+- ✅ Twitch 聊天室，直播人數，直播時間。
 - ✅ Focus on tap
 
 See [StreamPack](https://github.com/ThibaultBee/StreamPack) for more settings and information.
