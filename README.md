@@ -14,7 +14,7 @@ Live Streaming Camera
 
 - ❌ 錄影影片儲存到手機記憶體
 - ❌ 拍攝照片
-- ❌ 
+- ❌ OBS控制器?
 
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布 .apk 檔案。
