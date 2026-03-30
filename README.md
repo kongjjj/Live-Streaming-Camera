@@ -10,10 +10,11 @@ Live Streaming Camera
 - ✅ Twitch 聊天室，直播人數，直播時間。
 - ✅ 藍牙耳機連線。
 
-See [StreamPack](https://github.com/ThibaultBee/StreamPack) for more settings and information.
 
-## Getting started
+## 安裝方法
+我是使用 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 發布來發布 .apk 檔案。
 
+可以在手機上開啟 GitHub 發行頁面,下載 .apk 檔案並安裝。
 1. Click on "Use this template" to create a new repository from this template.
 2. Clone your new repository.
 3. Open the project with Android Studio.
