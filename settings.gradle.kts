@@ -16,8 +16,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { setUrl("https://jitpack.io") }
     }
 }
 
-rootProject.name = "MyStreamingApp"
+rootProject.name = "Live Streaming Camera"
 include(":app")
