@@ -1,6 +1,6 @@
 Live Streaming Camera
 
-一個使用 StreamPack boilerplate (https://github.com/ThibaultBee/StreamPack-boilerplate) 作底層製作的Android直播程式。
+一個使用 [StreamPack boilerplate](https://github.com/ThibaultBee/StreamPack-boilerplate) 作底層製作的Android直播程式。
 
 
 ## 功能
