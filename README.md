@@ -11,7 +11,7 @@ Live Streaming Camera
 - ✔️ 藍牙耳機連線。
 ![    Live-Streaming-Camera
 
-![screenshot](pics/Screenshot_1.png)
+![screenshot](pics/Screenshot_1.jpg)
 ## 更多可能加入功能
 
 - ❌ 錄影影片儲存到手機記憶體
