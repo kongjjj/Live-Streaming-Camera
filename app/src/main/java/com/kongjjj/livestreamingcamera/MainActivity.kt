@@ -66,6 +66,10 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 @SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
@@ -174,7 +178,27 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     // 網路監聽相關
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
-
+    // 在 MainActivity 類別中新增
+    private val serviceCommandReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                MyPersistentService.ACTION_START_STREAM -> {
+                    if (viewModel.isStreamingLiveData.value != true) {
+                        lifecycleScope.launch { viewModel.startStream() }
+                    }
+                }
+                MyPersistentService.ACTION_STOP_STREAM -> {
+                    if (viewModel.isStreamingLiveData.value == true) {
+                        lifecycleScope.launch { viewModel.stopStream() }
+                    }
+                }
+                MyPersistentService.ACTION_EXIT_APP -> {
+                    finishAffinity()
+                    android.os.Process.killProcess(android.os.Process.myPid())
+                }
+            }
+        }
+    }
     private val streamerRequiredPermissions =
         listOf(
             Manifest.permission.CAMERA,
@@ -277,6 +301,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         requestNotificationPermission()
         prefs.registerOnSharedPreferenceChangeListener(this)
+// 註冊服務命令接收器
+        val filter = IntentFilter().apply {
+            addAction(MyPersistentService.ACTION_START_STREAM)
+            addAction(MyPersistentService.ACTION_STOP_STREAM)
+            addAction(MyPersistentService.ACTION_EXIT_APP)
+        }
+        LocalBroadcastManager.getInstance(this).registerReceiver(serviceCommandReceiver, filter)
 
         viewModel.isStreamingLiveData.observe(this) { updateStatusText() }
         viewModel.isTryingConnectionLiveData.observe(this) { updateStatusText() }
@@ -1511,6 +1542,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onDestroy() {
         super.onDestroy()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(serviceCommandReceiver)
         prefs.unregisterOnSharedPreferenceChangeListener(this)
         try {
             networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }

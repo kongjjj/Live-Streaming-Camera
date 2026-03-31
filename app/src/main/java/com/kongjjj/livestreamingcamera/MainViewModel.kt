@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
+import android.content.Intent
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureResult
 import android.media.AudioFormat
@@ -42,6 +43,8 @@ import io.github.thibaultbee.streampack.core.utils.extensions.isClosedException
 import io.github.thibaultbee.srtdroid.core.models.Stats
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
+
 
 data class StreamStats(
     val bitrateKbps: Int = 0,
@@ -148,7 +151,14 @@ class MainViewModel(
             }
         }
     }
-
+    private fun updateStreamingState(isStreaming: Boolean) {
+        // 儲存狀態到 SharedPreferences
+        prefs.edit().putBoolean("is_streaming", isStreaming).apply()
+        // 發送廣播通知服務
+        val intent = Intent("com.kongjjj.livestreamingcamera.STREAM_STATE_CHANGED")
+        intent.putExtra("is_streaming", isStreaming)
+        LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
+    }
     private suspend fun switchToBuiltInMic() {
         bluetoothHelper.stopSco()
         streamer.setAudioSource(ConditionalAudioSourceFactory())
