@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory android:title="版本更新 Ver.2.35">
+    <PreferenceCategory android:title="版本更新 Ver.2.37">
+        <Preference
+            android:selectable="false"
+            android:title="1. 更新手機通知欄，現在可開始停止直播及關閉程式。"
+            android:summary="" />
 
         <Preference
             android:selectable="false"
-            android:title="1. 新增左下角後鏡頭選擇按鈕，如沒顯示有鏡頭，即表示手機鏡頭不支援。"
+            android:title="2. 新增左下角後鏡頭選擇按鈕，如沒顯示有鏡頭，即表示手機鏡頭不支援。"
             android:summary="如果按鈕按下畫面停止，表示該鏡頭不支援畫面擷取，不可用來直播，按下會斷線。" />
 
         <Preference
             android:selectable="false"
-            android:title="2. RTMP URL可直接輸入Twitch RTMP URL (rtmp://live.twitch.tv/app/live_...)直播。"
+            android:title="3. RTMP URL可直接輸入Twitch RTMP URL (rtmp://live.twitch.tv/app/live_...)直播。"
             android:summary="Android 16 版本RTMP不能直接直播到Twitch。" />
 
     </PreferenceCategory>
