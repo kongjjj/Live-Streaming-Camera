@@ -7,7 +7,7 @@ Live Streaming Camera
 
 - ✔️ RTMP 推流直播,Twitch 直接推流。
 - ✔️ SRT 推流直播。
-- ✔️ Twitch 聊天室，直播人數，直播時間。
+- ✔️ Twitch 聊天室、直播人數、直播時間。
 - ✔️ 藍牙耳機連線。
 
 ## 更多可能加入功能
