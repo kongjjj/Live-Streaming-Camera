@@ -16,6 +16,7 @@ Live Streaming Camera
 
 - ❌ 錄影影片儲存到手機記憶體
 - ❌ 拍攝照片
+- ❌ Overlay
 - ❌ OBS控制器?
 
 ## 安裝方法
