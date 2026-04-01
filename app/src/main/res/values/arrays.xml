@@ -187,4 +187,12 @@
         <item>1</item>
         <item>2</item>
     </string-array>
+    <string-array name="video_encoder_entries">
+        <item>H.264 (AVC)</item>
+        <item>H.265 (HEVC)</item>
+    </string-array>
+    <string-array name="video_encoder_values">
+        <item>h264</item>
+        <item>hevc</item>
+    </string-array>
 </resources>
