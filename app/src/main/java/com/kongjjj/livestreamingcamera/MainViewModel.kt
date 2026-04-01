@@ -128,6 +128,9 @@ class MainViewModel(
         viewModelScope.launch(defaultDispatcher) {
             rotationRepository.rotationFlow.collect { rotation -> streamer.setTargetRotation(rotation) }
         }
+        if (!prefs.contains("video_encoder_key")) {
+            prefs.edit().putString("video_encoder_key", "h264").apply()
+        }
         setupNetworkMonitoring()
         viewModelScope.launch {
             streamer.throwableFlow.filterNotNull().filter { it.isClosedException }.collect { _ ->
@@ -429,11 +432,22 @@ class MainViewModel(
         }
         val res = prefs.getString(videoResolutionKey, "1280x720") ?: "1280x720"
         val parts = res.split("x")
+        val width = parts[0].toIntOrNull() ?: 1280
+        val height = parts[1].toIntOrNull() ?: 720
+
+        // 讀取用戶選擇的編碼器
+        val encoderType = prefs.getString("video_encoder_key", "h264") ?: "h264"
+        val mimeType = when (encoderType) {
+            "hevc" -> MediaFormat.MIMETYPE_VIDEO_HEVC
+            else -> MediaFormat.MIMETYPE_VIDEO_AVC
+        }
+
         val videoConfig = VideoConfig(
-            mimeType = if (prefs.getString(endpointTypeKey, "rtmp") == "srt") MediaFormat.MIMETYPE_VIDEO_HEVC else MediaFormat.MIMETYPE_VIDEO_AVC,
-            resolution = Size(parts[0].toInt(), parts[1].toInt()),
+            mimeType = mimeType,
+            resolution = Size(width, height),
             fps = (prefs.getString(videoFpsKey, "25") ?: "25").toInt()
         )
+        Log.d(TAG, "設定影片編碼: $mimeType, 解析度: ${width}x${height}")
         streamer.setVideoConfig(videoConfig)
     }
 
