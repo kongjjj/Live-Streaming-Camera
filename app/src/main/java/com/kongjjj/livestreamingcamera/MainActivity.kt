@@ -41,6 +41,7 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.kongjjj.livestreamingcamera.databinding.ActivityMainBinding
 import com.kongjjj.livestreamingcamera.models.AudioLevelFlow
+import com.kongjjj.livestreamingcamera.ui.NetworkSignalOverlay
 import com.kongjjj.livestreamingcamera.utils.PermissionsManager
 import com.kongjjj.livestreamingcamera.utils.showDialog
 import com.kongjjj.livestreamingcamera.utils.toast
@@ -247,6 +248,16 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 
+    // 訊號強度權限請求（位置與電話狀態）
+    private val requestSignalPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.values.all { it }
+        if (!allGranted) {
+            toast("部分權限未授予，訊號強度顯示可能不完整")
+        }
+    }
+
     // 音量條相關
     private lateinit var audioLevelFlow: AudioLevelFlow
 
@@ -327,13 +338,31 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         updateStatsOverlayVisibility()
         updateChatFontSize()
         updateStatusText()
+
+        // 請求訊號強度所需的權限
+        requestSignalPermissions()
+    }
+
+    private fun requestSignalPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val permissionsToRequest = mutableListOf<String>()
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE)
+            }
+            if (permissionsToRequest.isNotEmpty()) {
+                requestSignalPermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         if (viewModel.isStreamingLiveData.value == true) {
             Log.d(TAG, "Streaming in progress, skipping audio/video reconfiguration")
-            return
+            // 注意：不要直接 return，因為還是需要處理聊天歷史等
         }
         if (prefs.getBoolean("pending_clear_history", false)) {
             prefs.edit { remove("pending_clear_history") }
@@ -1352,6 +1381,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.viewerCountLayout.visibility = View.GONE
         binding.uptimeText.visibility = View.GONE
 
+        // 隱藏訊號強度 Overlay
+        binding.networkSignalOverlay.visibility = View.GONE
+
         binding.statusTextView.visibility = View.INVISIBLE
         binding.audioLevelOverlay.visibility = View.GONE
         binding.streamStatsOverlay.visibility = View.GONE
@@ -1406,6 +1438,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         } else {
             binding.uptimeText.visibility = View.GONE
         }
+
+        // 恢復訊號強度 Overlay
+        binding.networkSignalOverlay.visibility = View.VISIBLE
 
         binding.statusTextView.visibility = View.VISIBLE
         binding.audioLevelOverlay.visibility = View.VISIBLE
