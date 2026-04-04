@@ -45,7 +45,16 @@
         app:layout_constraintEnd_toStartOf="@+id/cameraControls"
         android:layout_marginStart="16dp"
         android:layout_marginBottom="5dp" />
-
+    <!-- 網路訊號強度 Overlay（置於右上角按鈕列左側） -->
+    <com.kongjjj.livestreamingcamera.ui.NetworkSignalOverlay
+        android:id="@+id/networkSignalOverlay"
+        android:layout_width="40dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:layout_marginEnd="8dp"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/topRightButtonContainer" />
     <!-- 右上角按鈕容器 -->
     <LinearLayout
         android:id="@+id/topRightButtonContainer"
