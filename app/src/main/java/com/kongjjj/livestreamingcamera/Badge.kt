@@ -44,5 +44,12 @@ fun getBadgeImageRes(name: String): Int = when (name) {
     "sub-gifter" -> R.drawable.ic_badge_sub_gifter
     "twitchbot" -> R.drawable.ic_badge_twitchbot
     "share-the-love" -> R.drawable.ic_badge_share_the_love
+    "nasa-artemis-ii" -> R.drawable.ic_badge_nasa_artemis_ii
+    "umbrella-corporation" -> R.drawable.ic_badge_umbrella_corporation
+    "5-years-as-twitch-staff" -> R.drawable.ic_badge_5_years_as_twitch_staff
+    "10-years-as-twitch-staff" -> R.drawable.ic_badge_10_years_as_twitch_staff
+    "15-years-as-twitch-staff" -> R.drawable.ic_badge_15_years_as_twitch_staff
+    "ditto" -> R.drawable.ic_badge_ditto
+    "bingbonglove" -> R.drawable.ic_badge_bingbonglove
     else          -> 0
 }
