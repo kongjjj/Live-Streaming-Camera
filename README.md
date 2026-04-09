@@ -10,7 +10,7 @@ Live Streaming Camera
 - ✔️ Twitch 聊天室、直播人數、直播時間。
 - ✔️ 藍牙耳機連線。
   
-![Live-Streaming-Camera](pics/Screenshot_1.jpg)
+![Live-Streaming-Camera](pics/Screenshokt_1.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
 ## 更多可能加入功能
 
