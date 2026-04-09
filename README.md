@@ -1,6 +1,6 @@
 Live Streaming Camera
 
-一個使用 [StreamPack boilerplate](https://github.com/ThibaultBee/StreamPack-boilerplate) 作底層製作的Android直播程式。
+一個使用 [StreamPack boilerplate](https://github.com/ThibaultBee/StreamPack-boilerplate) 作底層製作的 Android/Twitch 直播程式。
 
 
 ## 功能
@@ -9,7 +9,7 @@ Live Streaming Camera
 - ✔️ SRT 推流直播。
 - ✔️ Twitch 聊天室、直播人數、直播時間。
 - ✔️ 藍牙耳機連線。
-- ✔️ 全屏顯示，在設定內開啟。
+- ✔️ 全屏顯示，請在設定內開啟。
   
 ![Live-Streaming-Camera](pics/Screenshot_0.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
