@@ -71,6 +71,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import com.kongjjj.livestreamingcamera.getBadgeImageRes
 
 @SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
@@ -85,6 +86,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     // 偏好設定鍵名
     private val endpointTypeKey by lazy { getString(R.string.endpoint_type_key) }
     private val showStatsKey = "show_stats_overlay"
+    private val showBatteryKey = "show_battery_overlay"
+    private val showNetworkSignalKey = "show_network_signal_overlay"
 
     private var isBlackOverlayVisible = false
     // 共用 OkHttpClient
@@ -102,7 +105,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private var lastMessageId: String? = null
     private var lastReceivedTimestamp: Long? = null
-
+    private val hideStatusBarKey = "hide_status_bar"
     private var webSocket: WebSocket? = null
     private var isWebSocketConnected = false
     private var channel: String = ""
@@ -113,44 +116,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private val chatEnabledKey = "chat_enabled"
     @Suppress("PrivatePropertyName")
     private val PREF_CHAT_HISTORY = "chat_history"
-    private fun getBadgeImageRes(name: String): Int = when (name) {
-        "broadcaster" -> R.drawable.ic_badge_broadcaster
-        "moderator"   -> R.drawable.ic_badge_moderator
-        "subscriber"  -> R.drawable.ic_badge_subscriber
-        "vip"         -> R.drawable.ic_badge_vip
-        "bits"        -> R.drawable.ic_badge_bits
-        "premium"     -> R.drawable.ic_badge_premium
-        "admin"       -> R.drawable.ic_badge_admin
-        "staff"       -> R.drawable.ic_badge_staff
-        "lead_moderator" -> R.drawable.ic_badge_lead_moderator
-        "verified"    -> R.drawable.ic_badge_verified
-        "partner"     -> R.drawable.ic_badge_verified
-        "bot-badge"   -> R.drawable.ic_badge_bot
-        "founder"     -> R.drawable.ic_badge_founders
-        "artist"      -> R.drawable.ic_badge_artist
-        "no_audio"    -> R.drawable.ic_badge_no_audio
-        "no_video"    -> R.drawable.ic_badge_no_video
-        "hype-train"  -> R.drawable.ic_badge_hypetrain
-        "twitch-recap-2025" -> R.drawable.ic_badge_2025
-        "twitch-recap-2024" -> R.drawable.ic_badge_2024
-        "twitch-recap-2023" -> R.drawable.ic_badge_2023
-        "subtember-2025" -> R.drawable.ic_badge_subtember_2025
-        "subtember-2024" -> R.drawable.ic_badge_subtember_2024
-        "clip-champ" -> R.drawable.ic_badge_clip_champ
-        "clips-leader" -> R.drawable.ic_badge_clips_leader
-        "twitch-dj" -> R.drawable.ic_badge_dj
-        "user-anniversary" -> R.drawable.ic_badge_user_anniversary
-        "turbo" -> R.drawable.ic_badge_turbo
-        "global_mod" -> R.drawable.ic_badge_global_mod
-        "glitchcon2020" -> R.drawable.ic_badge_glitchcon2020
-        "anonymous-cheerer" -> R.drawable.ic_badge_anonymous
-        "ambassador" -> R.drawable.ic_badge_ambassador
-        "bits-leader" -> R.drawable.ic_badge_bits_leader
-        "sub-gifter" -> R.drawable.ic_badge_sub_gifter
-        "twitchbot" -> R.drawable.ic_badge_twitchbot
-        "share-the-love" -> R.drawable.ic_badge_share_the_love
-        else          -> 0
-    }
+
 
     // 聊天歷史載入設定
     private val loadMessageHistoryKey = "load_message_history"
@@ -338,11 +304,22 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         updateStatsOverlayVisibility()
         updateChatFontSize()
         updateStatusText()
-
+        updateOverlayVisibility()  // 根據偏好設定初始可見性
+        applyStatusBarVisibility()
         // 請求訊號強度所需的權限
         requestSignalPermissions()
     }
+    private fun applyStatusBarVisibility() {
+        // 黑屏模式下狀態欄已被隱藏，不需再改變
+        if (isBlackOverlayVisible) return
 
+        val hideStatusBar = prefs.getBoolean(hideStatusBarKey, false)
+        if (hideStatusBar) {
+            enterImmersiveMode()
+        } else {
+            exitImmersiveMode()
+        }
+    }
     private fun requestSignalPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val permissionsToRequest = mutableListOf<String>()
@@ -369,6 +346,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             clearChatHistory()
         }
         startViewerUpdates()
+        updateOverlayVisibility()  // 從設定頁返回時更新可見性
+        applyStatusBarVisibility()
     }
 
     override fun onPause() {
@@ -643,6 +622,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         when (key) {
             endpointTypeKey -> updateStatusText()
             showStatsKey -> updateStatsOverlayVisibility()
+            showBatteryKey, showNetworkSignalKey -> updateOverlayVisibility()
             "chat_font_size" -> updateChatFontSize()
             chatShadowEnabledKey -> updateChatShadow()
             chatShadowRadiusKey -> updateChatShadowRadius()
@@ -672,6 +652,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
             loadMessageHistoryKey -> loadMessageHistory = prefs.getBoolean(loadMessageHistoryKey, true)
             loadMessageHistoryOnReconnectKey -> loadMessageHistoryOnReconnect = prefs.getBoolean(loadMessageHistoryOnReconnectKey, true)
+            hideStatusBarKey -> applyStatusBarVisibility()
         }
     }
 
@@ -683,6 +664,20 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun updateStatsOverlayVisibility() {
         val enabled = prefs.getBoolean(showStatsKey, false)
         binding.streamStatsOverlay.visibility = if (enabled) View.VISIBLE else View.GONE
+    }
+
+    /**
+     * 根據偏好設定更新電池與網路訊號 Overlay 的可見性（需考慮黑屏模式）
+     */
+    private fun updateOverlayVisibility() {
+        if (isBlackOverlayVisible) {
+            // 黑屏模式下，Overlay 已由 hideAllButtons 強制隱藏，不需變更
+            return
+        }
+        val showBattery = prefs.getBoolean(showBatteryKey, true)
+        val showNetwork = prefs.getBoolean(showNetworkSignalKey, true)
+        binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
+        binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
     }
 
     private fun setupBluetoothButton() {
@@ -1333,6 +1328,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             restoreAllButtons()
             exitImmersiveMode()
             isBlackOverlayVisible = false
+            // 退出黑屏後，重新套用偏好設定
+            updateOverlayVisibility()
+            applyStatusBarVisibility()
         } else {
             binding.blackOverlay.isVisible = true
             hideAllButtons()
@@ -1344,7 +1342,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun hideAllButtons() {
         // 隱藏右上角按鈕容器
         binding.topRightButtonContainer.visibility = View.GONE
-
+        binding.batteryOverlay.visibility = View.GONE
         // 隱藏右下角所有控制按鈕（包含直播按鈕、切換鏡頭等）
         binding.blackScreenButton.background = null
         binding.blackScreenButton.setImageDrawable(null)
@@ -1392,7 +1390,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun restoreAllButtons() {
         // 顯示右上角按鈕容器
         binding.topRightButtonContainer.visibility = View.VISIBLE
-
+        // 電池 Overlay 將由 updateOverlayVisibility 根據偏好設定決定，此處不直接設為 VISIBLE
+        // 網路訊號 Overlay 同理
         // 恢復右下角所有控制按鈕
         binding.blackScreenButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.blackScreenButton.setImageResource(R.drawable.ic_light)
@@ -1439,12 +1438,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             binding.uptimeText.visibility = View.GONE
         }
 
-        // 恢復訊號強度 Overlay
-        binding.networkSignalOverlay.visibility = View.VISIBLE
-
+        // 網路訊號與電池 Overlay 將由 updateOverlayVisibility 統一處理
         binding.statusTextView.visibility = View.VISIBLE
         binding.audioLevelOverlay.visibility = View.VISIBLE
         updateStatsOverlayVisibility()
+        // 恢復 Overlay 可見性（根據偏好設定）
+        updateOverlayVisibility()
+        applyStatusBarVisibility()
     }
 
     private fun updateFlashIcon() {

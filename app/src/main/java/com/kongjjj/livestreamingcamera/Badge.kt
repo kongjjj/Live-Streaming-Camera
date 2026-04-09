@@ -51,5 +51,6 @@ fun getBadgeImageRes(name: String): Int = when (name) {
     "15-years-as-twitch-staff" -> R.drawable.ic_badge_15_years_as_twitch_staff
     "ditto" -> R.drawable.ic_badge_ditto
     "bingbonglove" -> R.drawable.ic_badge_bingbonglove
+    "baby-chick-chat-badge" -> R.drawable.ic_badge_baby_chick_chat_badge
     else          -> 0
 }
