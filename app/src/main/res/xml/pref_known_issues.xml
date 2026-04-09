@@ -1,13 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.41">
+        <Preference
+            android:selectable="false"
+            android:title="1. 加入電池資訊顯示，訊號顯示和電池資訊可在設定內開關。"
+            android:summary=" " />
+        <Preference
+            android:selectable="false"
+            android:title="2. 新增隱藏狀態欄和導航欄，變成全屏顯示，可在設定內開關。"
+            android:summary="如果更新後畫面顯示不正確，請在設定內關閉再開啟。" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="版本更新 Ver.2.39">
+    <Preference
+        android:selectable="false"
+        android:title="加入Wifi,Sim1,Sim2訊號顯示。"
+        android:summary=" " />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="版本更新 Ver.2.38">
         <Preference
             android:selectable="false"
             android:title="更新RTMP/SRT對H.264/HEVC不再綁定，令間歇重連後可能自動選擇不正確導致黑畫面的bug消失。"
             android:summary="- 請在設定內手動設定RTMP用H.264,SRT用HEVC。" />
-
-
     </PreferenceCategory>
+
     <PreferenceCategory android:title="版本更新 Ver.2.37">
         <Preference
             android:selectable="false"
