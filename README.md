@@ -9,8 +9,10 @@ Live Streaming Camera
 - ✔️ SRT 推流直播。
 - ✔️ Twitch 聊天室、直播人數、直播時間。
 - ✔️ 藍牙耳機連線。
-- ✔️ 全屏顯示，請在設定內開啟。
 - ✔️ SRT 直播時顯示資訊，請在設定內開啟。
+- ✔️ 全屏顯示，可在設定內開關。
+- ✔️ 電池資訊、溫度顯示，可在設定內開關。
+- ✔️ Wifi、Sim卡訊號顯示，可在設定內開關。
   
 ![Live-Streaming-Camera](pics/Screenshot_0.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
