@@ -213,7 +213,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             viewModel.updateBluetoothIcon(false)
         }
     }
-
+    private val showShakeLevelKey = "show_shake_level"
     // 訊號強度權限請求（位置與電話狀態）
     private val requestSignalPermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -653,6 +653,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             loadMessageHistoryKey -> loadMessageHistory = prefs.getBoolean(loadMessageHistoryKey, true)
             loadMessageHistoryOnReconnectKey -> loadMessageHistoryOnReconnect = prefs.getBoolean(loadMessageHistoryOnReconnectKey, true)
             hideStatusBarKey -> applyStatusBarVisibility()
+            showShakeLevelKey -> updateOverlayVisibility()
         }
     }
 
@@ -670,14 +671,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
      * 根據偏好設定更新電池與網路訊號 Overlay 的可見性（需考慮黑屏模式）
      */
     private fun updateOverlayVisibility() {
-        if (isBlackOverlayVisible) {
-            // 黑屏模式下，Overlay 已由 hideAllButtons 強制隱藏，不需變更
-            return
-        }
+        if (isBlackOverlayVisible) return
         val showBattery = prefs.getBoolean(showBatteryKey, true)
         val showNetwork = prefs.getBoolean(showNetworkSignalKey, true)
+        val showShake = prefs.getBoolean(showShakeLevelKey, false)
         binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
         binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
+        binding.shakeLevelOverlay.visibility = if (showShake) View.VISIBLE else View.GONE
     }
 
     private fun setupBluetoothButton() {
@@ -1343,6 +1343,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         // 隱藏右上角按鈕容器
         binding.topRightButtonContainer.visibility = View.GONE
         binding.batteryOverlay.visibility = View.GONE
+        binding.shakeLevelOverlay.visibility = View.GONE
         // 隱藏右下角所有控制按鈕（包含直播按鈕、切換鏡頭等）
         binding.blackScreenButton.background = null
         binding.blackScreenButton.setImageDrawable(null)
