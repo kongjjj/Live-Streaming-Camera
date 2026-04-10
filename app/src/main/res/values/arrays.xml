@@ -35,8 +35,8 @@
         <item>5</item>  <!-- CAMCORDER -->
     </string-array>
     <string-array name="endpoint_type_entries">
-        <item>SRT</item>
-        <item>RTMP</item>
+        <item>SRT (可用H.264、H.265編碼)</item>
+        <item>RTMP (只可用H.264編碼)</item>
     </string-array>
     <string-array name="endpoint_type_values">
         <item>srt</item>
