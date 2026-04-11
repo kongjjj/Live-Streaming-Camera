@@ -293,6 +293,12 @@
             app:key="show_shake_level"
             app:title="顯示手震程度"
             app:summary="即時顯示手機抖動強度，協助穩定拍攝" />
+
+        <SwitchPreference
+            app:defaultValue="true"
+            app:key="show_audio_level"
+            app:title="顯示音量條"
+            app:summary="即時顯示麥克風收音音量" />
     </PreferenceCategory>
     <!-- 背景服務設定區塊 -->
     <PreferenceCategory app:title="背景運行">

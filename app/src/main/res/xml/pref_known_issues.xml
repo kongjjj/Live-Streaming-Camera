@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.43">
+        <Preference
+            android:selectable="false"
+            android:title="1. 音量顯示，改成可在設定內開關。"
+            android:summary=" " />
+        <Preference
+            android:selectable="false"
+            android:title="2. 修正一些界面關閉後，其他界面互相重疊問題。"
+            android:summary=" " />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="版本更新 Ver.2.42">
+        <Preference
+            android:selectable="false"
+            android:title="1. 加入手震程度顯示，可在設定內開關。"
+            android:summary=" " />
+
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.41">
         <Preference
             android:selectable="false"
