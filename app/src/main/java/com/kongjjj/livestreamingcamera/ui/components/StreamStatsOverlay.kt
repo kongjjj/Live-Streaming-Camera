@@ -20,12 +20,12 @@ class StreamStatsOverlay @JvmOverloads constructor(
     // 統一使用小字型畫筆（原 smallTextPaint 的大小）
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
-        textSize = 24f // 約12sp
+        textSize = 30f // 約12sp
         setShadowLayer(4f, 2f, 2f, Color.BLACK)
     }
 
     private val backgroundPaint = Paint().apply {
-        color = Color.argb(128, 0, 0, 0) // 半透明黑底
+        color = Color.argb(128, 192, 192, 192) // 半透明黑底
     }
 
     // 行距設定（可調整數值使間距更細）
