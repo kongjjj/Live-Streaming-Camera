@@ -22,7 +22,7 @@ class ShakeLevelOverlay @JvmOverloads constructor(
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
 
-    private val backgroundPaint = Paint().apply { color = Color.DKGRAY }
+    private val backgroundPaint = Paint().apply { color = Color.GRAY }
     private val barPaint = Paint()
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
