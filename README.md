@@ -13,7 +13,9 @@ Live Streaming Camera
 - ✔️ 全屏顯示，可在設定內開關。
 - ✔️ 電池資訊、溫度顯示，可在設定內開關。
 - ✔️ Wifi、Sim卡訊號顯示，可在設定內開關。
+- ✔️ 左右音量顯示，可在設定內開關。
 - ✔️ 手機抖動顯示，可在設定內開關。
+
   
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
