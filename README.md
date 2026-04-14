@@ -21,10 +21,10 @@ Live Streaming Camera
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
 ## 更多可能加入功能
 
-- ❌ 錄影影片儲存到手機記憶體
-- ❌ 拍攝照片
-- ❌ Overlay
-- ❌ OBS控制器?
+- 🔜 錄影影片儲存到手機記憶體
+- 🔜 拍攝照片
+- 🔜 Overlay
+- 🔜 OBS控制器?
 
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布最新 .apk 檔案。
