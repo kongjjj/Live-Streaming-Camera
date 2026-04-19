@@ -26,6 +26,8 @@ Live Streaming Camera
 - 🔜 Overlay
 - 🔜 OBS控制器?
 
+## 使用說明
+
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布最新 .apk 檔案。
 
