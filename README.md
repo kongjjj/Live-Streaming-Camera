@@ -27,6 +27,7 @@ Live Streaming Camera
 - 🔜 OBS控制器?
 
 ## 按鍵說明
+![Live-Streaming-Camera](pics/Screenshot_4.jpg)
 
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布最新 .apk 檔案。
