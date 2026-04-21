@@ -72,6 +72,7 @@ import android.content.Context
 import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.kongjjj.livestreamingcamera.getBadgeImageRes
+import com.kongjjj.livestreamingcamera.tts.TTSManager
 
 @SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
@@ -82,13 +83,19 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private val prefs by lazy { PreferenceManager.getDefaultSharedPreferences(this) }
-
+    private lateinit var ttsManager: TTSManager
+    private val ttsEnabledKey = "tts_enabled"
+    private val ttsIgnoreUrlsKey = "tts_ignore_urls"
+    private val ttsIgnoreEmotesKey = "tts_ignore_emotes"
+    private val ttsIgnoreSenderKey = "tts_ignore_sender"
+    private val spokenMessageIds = mutableSetOf<String>()
     // 偏好設定鍵名
     private val endpointTypeKey by lazy { getString(R.string.endpoint_type_key) }
     private val showStatsKey = "show_stats_overlay"
     private val showBatteryKey = "show_battery_overlay"
     private val showNetworkSignalKey = "show_network_signal_overlay"
 
+    private val showAudioLevelKey = "show_audio_level"
     private var isBlackOverlayVisible = false
     // 共用 OkHttpClient
     private val chatShadowEnabledKey = "chat_text_shadow_enabled"
@@ -300,7 +307,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         viewModel.streamStats.observe(this) { stats ->
             binding.streamStatsOverlay.updateStats(stats)
         }
-
+        ttsManager = TTSManager(this)
         updateStatsOverlayVisibility()
         updateChatFontSize()
         updateStatusText()
@@ -620,6 +627,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
+            ttsEnabledKey -> {
+                if (!prefs.getBoolean(ttsEnabledKey, false)) {
+                    ttsManager.stop()
+                }
+            }
             endpointTypeKey -> updateStatusText()
             showStatsKey -> updateStatsOverlayVisibility()
             showBatteryKey, showNetworkSignalKey -> updateOverlayVisibility()
@@ -654,6 +666,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             loadMessageHistoryOnReconnectKey -> loadMessageHistoryOnReconnect = prefs.getBoolean(loadMessageHistoryOnReconnectKey, true)
             hideStatusBarKey -> applyStatusBarVisibility()
             showShakeLevelKey -> updateOverlayVisibility()
+            showAudioLevelKey -> updateOverlayVisibility()
         }
     }
 
@@ -675,9 +688,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val showBattery = prefs.getBoolean(showBatteryKey, true)
         val showNetwork = prefs.getBoolean(showNetworkSignalKey, true)
         val showShake = prefs.getBoolean(showShakeLevelKey, false)
+        val showAudio = prefs.getBoolean(showAudioLevelKey, true)
         binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
         binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
         binding.shakeLevelOverlay.visibility = if (showShake) View.VISIBLE else View.GONE
+        binding.audioLevelOverlay.visibility = if (showAudio) View.VISIBLE else View.GONE
     }
 
     private fun setupBluetoothButton() {
@@ -1118,8 +1133,28 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                                         }
                                     }
                                 }
+
+                                // ✅ 將 TTS 程式碼移到這裡（在 msg 作用域內）
+                                val ttsEnabled = prefs.getBoolean(ttsEnabledKey, false)
+                                if (ttsEnabled && !spokenMessageIds.contains(msg.id)) {
+                                    spokenMessageIds.add(msg.id)
+                                    // 避免集合無限增長
+                                    if (spokenMessageIds.size > 500) {
+                                        spokenMessageIds.clear()
+                                    }
+                                    val ignoreSender = prefs.getBoolean(ttsIgnoreSenderKey, false)
+                                    val ignoreUrls = prefs.getBoolean(ttsIgnoreUrlsKey, false)
+                                    val ignoreEmotes = prefs.getBoolean(ttsIgnoreEmotesKey, false)
+                                    val textToSpeak = if (ignoreSender) {
+                                        msg.message
+                                    } else {
+                                        "${msg.sender} 說：${msg.message}"
+                                    }
+                                    ttsManager.speak(textToSpeak, ignoreUrls, ignoreEmotes)
+                                }
                             }
                         }
+
                         line.contains("NOTICE") && line.contains("Invalid channel") -> {
                             showSystemMessage("頻道不存在，請檢查名稱")
                         }
@@ -1595,6 +1630,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         if (::audioLevelFlow.isInitialized) {
             audioLevelFlow.stop()
         }
+        ttsManager.shutdown()
     }
 
     companion object {
