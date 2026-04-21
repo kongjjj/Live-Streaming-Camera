@@ -51,6 +51,34 @@
         app:showSeekBarValue="true"
         app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
+    <PreferenceCategory app:title="語音輸出 (TTS)">
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="tts_enabled"
+            app:title="啟用聊天室語音"
+            app:summary="自動朗讀聊天室新訊息" />
+
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="tts_ignore_sender"
+            app:title="忽略發送者名稱"
+            app:summary="只朗讀訊息內容，不讀出發送者名稱"
+            app:dependency="tts_enabled" />
+
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="tts_ignore_urls"
+            app:title="忽略網址"
+            app:summary="朗讀時略過訊息中的網址"
+            app:dependency="tts_enabled" />
+
+        <SwitchPreference
+            app:defaultValue="false"
+            app:key="tts_ignore_emotes"
+            app:title="忽略表情符號"
+            app:summary="朗讀時略過訊息中的表情符號"
+            app:dependency="tts_enabled" />
+    </PreferenceCategory>
     <PreferenceCategory>
     <!-- 載入歷史開關 -->
     <SwitchPreference
