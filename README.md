@@ -15,7 +15,7 @@ Live Streaming Camera
 - ✔️ Wifi、Sim卡訊號顯示，可在設定內開關。
 - ✔️ 左右音量顯示，可在設定內開關。
 - ✔️ 手機抖動顯示，可在設定內開關。
-
+- ✔️ 聊天訊息朗讀。
   
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
