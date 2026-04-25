@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.45">
+        <Preference
+            android:selectable="false"
+            android:title="修復藍牙連線問題，令連線更穩定。"
+            android:summary=" " />
+        4
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.44">
         <Preference
             android:selectable="false"
