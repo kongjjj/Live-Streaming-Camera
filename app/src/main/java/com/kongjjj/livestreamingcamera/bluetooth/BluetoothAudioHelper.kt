@@ -45,14 +45,23 @@ class BluetoothAudioHelper(
 
     /**
      * 偵測可用的藍牙 SCO 輸入裝置
+     * @return Pair(裝置, 是否因為權限不足而失敗)
      */
-    fun detectBluetoothScoDevice(): AudioDeviceInfo? {
+    fun detectBluetoothScoDeviceWithStatus(): Pair<AudioDeviceInfo?, Boolean> {
         if (!checkBluetoothPermission()) {
             Log.w(tag, "detectBluetoothScoDevice: 權限不足")
-            return null
+            return null to true
         }
 
-        val devices = audioManager?.getDevices(AudioManager.GET_DEVICES_INPUTS) ?: emptyArray()
+        val am = audioManager ?: return null to false
+
+        val devices = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ 建議使用 getAvailableCommunicationDevices
+            am.availableCommunicationDevices.toTypedArray()
+        } else {
+            am.getDevices(AudioManager.GET_DEVICES_INPUTS)
+        }
+
         val scoDevice = devices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO }
 
         if (scoDevice != null) {
@@ -60,8 +69,13 @@ class BluetoothAudioHelper(
         } else {
             Log.w(tag, "未偵測到任何藍牙 SCO 裝置")
         }
-        return scoDevice
+        return scoDevice to false
     }
+
+    /**
+     * 偵測可用的藍牙 SCO 輸入裝置 (向後相容)
+     */
+    fun detectBluetoothScoDevice(): AudioDeviceInfo? = detectBluetoothScoDeviceWithStatus().first
 
     /**
      * 檢查 HFP 耳機是否已連接
@@ -93,11 +107,22 @@ class BluetoothAudioHelper(
     }
 
     /**
-     * 停止 SCO 鏈路
+     * 停止 SCO 鏈路並恢復音訊模式
      */
     fun stopSco() {
         Log.d(tag, "stopSco 呼叫")
         val am = audioManager ?: return
+
+        // 恢復為正常模式
+        try {
+            if (am.mode != AudioManager.MODE_NORMAL) {
+                am.mode = AudioManager.MODE_NORMAL
+                Log.i(tag, "音訊模式已恢復為 MODE_NORMAL")
+            }
+        } catch (e: Throwable) {
+            Log.w(tag, "恢復音訊模式失敗", e)
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             stopScoModern(am)
         } else {
@@ -148,16 +173,23 @@ class BluetoothAudioHelper(
 
     @RequiresApi(Build.VERSION_CODES.S)
     private suspend fun startScoModern(am: AudioManager, timeoutMs: Long): Boolean {
+        // 重新偵測以獲取最新的 AudioDeviceInfo 實例，避免 invalid portID 錯誤
         val device = detectBluetoothScoDevice() ?: return false
         try {
             // Android 12+ 通常需要切換模式才能讓 setCommunicationDevice 生效
             am.mode = AudioManager.MODE_IN_COMMUNICATION
+            val result = am.setCommunicationDevice(device)
+            if (!result) {
+                Log.w(tag, "setCommunicationDevice 回傳 false")
+                return false
+            }
+        } catch (e: IllegalArgumentException) {
+            Log.e(tag, "設定通訊裝置失敗: invalid portID 或無效參數", e)
+            return false
         } catch (e: Throwable) {
-            Log.w(tag, "設定 MODE_IN_COMMUNICATION 失敗", e)
+            Log.e(tag, "設定通訊裝置時發生非預期錯誤", e)
+            return false
         }
-
-        val result = am.setCommunicationDevice(device)
-        if (!result) return false
 
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {

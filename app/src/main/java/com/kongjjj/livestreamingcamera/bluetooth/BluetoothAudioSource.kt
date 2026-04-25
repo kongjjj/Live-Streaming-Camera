@@ -118,20 +118,31 @@ class BluetoothAudioSource(
     }
 
     override fun fillAudioFrame(frame: RawFrame): RawFrame {
-        val ar = requireNotNull(audioRecord) { "AudioRecord not initialized" }
+        val ar = audioRecord ?: return frame
         if (ar.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
-            throw IllegalStateException("AudioRecord is not recording")
+            Log.w(tag, "fillAudioFrame: AudioRecord is not recording, state=${ar.recordingState}")
+            _isStreamingFlow.tryEmit(false)
+            // Fill with silence instead of throwing
+            frame.rawBuffer.clear()
+            frame.rawBuffer.put(ByteArray(frame.rawBuffer.remaining()))
+            return frame
         }
 
         val buffer = frame.rawBuffer
         val bytesRead = ar.read(buffer, buffer.remaining())
-        Log.d(tag, "fillAudioFrame read $bytesRead bytes") // 關鍵日誌
         if (bytesRead > 0) {
             frame.timestampInUs = System.nanoTime() / 1000L
             return frame
         } else {
-            frame.close()
-            throw IllegalStateException("AudioRecord read error: $bytesRead")
+            Log.e(tag, "fillAudioFrame read error: $bytesRead")
+            if (bytesRead < 0) {
+                // Potential fatal error
+                _isStreamingFlow.tryEmit(false)
+            }
+            // Fill with silence to avoid noise/crash
+            buffer.clear()
+            buffer.put(ByteArray(buffer.remaining()))
+            return frame
         }
     }
 
