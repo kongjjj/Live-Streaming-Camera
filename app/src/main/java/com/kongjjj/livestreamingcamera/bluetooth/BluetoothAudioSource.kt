@@ -32,6 +32,7 @@ class BluetoothAudioSource(
 
     private var audioRecord: AudioRecord? = null
     private var bufferSize = 0
+    private var silentBuffer: ByteArray? = null
     private var currentConfig: AudioSourceConfig? = null
     private val _isStreamingFlow = MutableStateFlow(false)
     override val isStreamingFlow = _isStreamingFlow.asStateFlow()
@@ -92,6 +93,7 @@ class BluetoothAudioSource(
             release()
             throw IllegalStateException("Failed to initialize AudioRecord")
         }
+        silentBuffer = ByteArray(bufferSize)
         Log.i(tag, "configure completed, bufferSize=$bufferSize")
     }
 
@@ -113,18 +115,30 @@ class BluetoothAudioSource(
         _isStreamingFlow.tryEmit(false)
         audioRecord?.release()
         audioRecord = null
+        silentBuffer = null
         currentConfig = null
         Log.i(tag, "released")
+    }
+
+    private fun fillWithSilence(buffer: java.nio.ByteBuffer) {
+        buffer.clear()
+        val silence = silentBuffer
+        if (silence != null && silence.size >= buffer.remaining()) {
+            buffer.put(silence, 0, buffer.remaining())
+        } else {
+            // Fallback if silentBuffer is not initialized or too small
+            val size = buffer.remaining()
+            val fallbackSilence = ByteArray(size)
+            buffer.put(fallbackSilence)
+        }
     }
 
     override fun fillAudioFrame(frame: RawFrame): RawFrame {
         val ar = audioRecord ?: return frame
         if (ar.recordingState != AudioRecord.RECORDSTATE_RECORDING) {
             Log.w(tag, "fillAudioFrame: AudioRecord is not recording, state=${ar.recordingState}")
-            _isStreamingFlow.tryEmit(false)
             // Fill with silence instead of throwing
-            frame.rawBuffer.clear()
-            frame.rawBuffer.put(ByteArray(frame.rawBuffer.remaining()))
+            fillWithSilence(frame.rawBuffer)
             return frame
         }
 
@@ -135,13 +149,8 @@ class BluetoothAudioSource(
             return frame
         } else {
             Log.e(tag, "fillAudioFrame read error: $bytesRead")
-            if (bytesRead < 0) {
-                // Potential fatal error
-                _isStreamingFlow.tryEmit(false)
-            }
             // Fill with silence to avoid noise/crash
-            buffer.clear()
-            buffer.put(ByteArray(buffer.remaining()))
+            fillWithSilence(buffer)
             return frame
         }
     }

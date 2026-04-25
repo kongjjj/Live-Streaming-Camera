@@ -30,6 +30,7 @@ class BluetoothAudioHelper(
     }
 
     private val tag = "BluetoothHelper"
+    private var originalMode: Int = AudioManager.MODE_NORMAL
 
     /**
      * 檢查 BLUETOOTH_CONNECT 權限（Android 12+）
@@ -113,21 +114,21 @@ class BluetoothAudioHelper(
         Log.d(tag, "stopSco 呼叫")
         val am = audioManager ?: return
 
-        // 恢復為正常模式
-        try {
-            if (am.mode != AudioManager.MODE_NORMAL) {
-                am.mode = AudioManager.MODE_NORMAL
-                Log.i(tag, "音訊模式已恢復為 MODE_NORMAL")
-            }
-        } catch (e: Throwable) {
-            Log.w(tag, "恢復音訊模式失敗", e)
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             stopScoModern(am)
         } else {
             @Suppress("DEPRECATION")
             try { am.stopBluetoothSco() } catch (e: Throwable) { Log.e(tag, "stopBluetoothSco 失敗", e) }
+        }
+
+        // 恢復原始音訊模式 (在停止 SCO/清除裝置之後)
+        try {
+            if (am.mode != originalMode) {
+                am.mode = originalMode
+                Log.i(tag, "音訊模式已恢復為 $originalMode")
+            }
+        } catch (e: Throwable) {
+            Log.w(tag, "恢復音訊模式失敗", e)
         }
     }
 
@@ -176,6 +177,8 @@ class BluetoothAudioHelper(
         // 重新偵測以獲取最新的 AudioDeviceInfo 實例，避免 invalid portID 錯誤
         val device = detectBluetoothScoDevice() ?: return false
         try {
+            // 儲存原始模式以便稍後恢復
+            originalMode = am.mode
             // Android 12+ 通常需要切換模式才能讓 setCommunicationDevice 生效
             am.mode = AudioManager.MODE_IN_COMMUNICATION
             val result = am.setCommunicationDevice(device)
