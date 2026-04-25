@@ -142,7 +142,17 @@ class MainViewModel(
     fun enableBluetooth(enabled: Boolean) {
         viewModelScope.launch {
             if (!enabled) { switchToBuiltInMic(); _bluetoothEnabled.postValue(false); return@launch }
-            val device = bluetoothHelper.detectBluetoothScoDevice() ?: run { _bluetoothEnabled.postValue(false); _toastMessage.postValue("未偵測到藍牙耳機"); return@launch }
+            val (device, permissionDenied) = bluetoothHelper.detectBluetoothScoDeviceWithStatus()
+            if (permissionDenied) {
+                _bluetoothEnabled.postValue(false)
+                // Permission request is already triggered inside bluetoothHelper
+                return@launch
+            }
+            if (device == null) {
+                _bluetoothEnabled.postValue(false)
+                _toastMessage.postValue("未偵測到藍牙耳機")
+                return@launch
+            }
             if (withContext(Dispatchers.IO) { bluetoothHelper.startScoAndWait(4000) }) {
                 try {
                     streamer.setAudioSource(BluetoothAudioSourceFactory(device))
@@ -151,6 +161,9 @@ class MainViewModel(
                 } catch (_: Exception) {
                     bluetoothHelper.stopSco(); _bluetoothEnabled.postValue(false); _toastMessage.postValue("藍牙啟用失敗")
                 }
+            } else {
+                _bluetoothEnabled.postValue(false)
+                _toastMessage.postValue("藍牙 SCO 連線超時")
             }
         }
     }
