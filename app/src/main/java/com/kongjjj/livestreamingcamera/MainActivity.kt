@@ -94,7 +94,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private val showStatsKey = "show_stats_overlay"
     private val showBatteryKey = "show_battery_overlay"
     private val showNetworkSignalKey = "show_network_signal_overlay"
-
+    private val showTiltKey = "show_tilt_overlay"
     private val showAudioLevelKey = "show_audio_level"
     private var isBlackOverlayVisible = false
     // 共用 OkHttpClient
@@ -634,6 +634,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
             endpointTypeKey -> updateStatusText()
             showStatsKey -> updateStatsOverlayVisibility()
+            showTiltKey -> updateOverlayVisibility()
             showBatteryKey, showNetworkSignalKey -> updateOverlayVisibility()
             "chat_font_size" -> updateChatFontSize()
             chatShadowEnabledKey -> updateChatShadow()
@@ -689,10 +690,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val showNetwork = prefs.getBoolean(showNetworkSignalKey, true)
         val showShake = prefs.getBoolean(showShakeLevelKey, false)
         val showAudio = prefs.getBoolean(showAudioLevelKey, true)
+        val showTilt = prefs.getBoolean(showTiltKey, false)
         binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
         binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
         binding.shakeLevelOverlay.visibility = if (showShake) View.VISIBLE else View.GONE
         binding.audioLevelOverlay.visibility = if (showAudio) View.VISIBLE else View.GONE
+        binding.tiltOverlay.visibility = if (showTilt) View.VISIBLE else View.GONE
     }
 
     private fun setupBluetoothButton() {
@@ -1376,6 +1379,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun hideAllButtons() {
         // 隱藏右上角按鈕容器
+        binding.tiltOverlay.visibility = View.GONE
         binding.topRightButtonContainer.visibility = View.GONE
         binding.batteryOverlay.visibility = View.GONE
         binding.shakeLevelOverlay.visibility = View.GONE
