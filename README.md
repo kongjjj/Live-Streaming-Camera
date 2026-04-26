@@ -16,7 +16,7 @@ Live Streaming Camera
 - ✔️ 左右音量顯示，可在設定內開關。
 - ✔️ 手機抖動顯示，可在設定內開關。
 - ✔️ TTS聊天訊息朗讀。
-- ✔️ 加入水平角度顯示，可在設定內開關。
+- ✔️ 水平角度顯示，可在設定內開關。
   
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
