@@ -295,6 +295,12 @@
             app:summary="即時顯示手機抖動強度，協助穩定拍攝" />
 
         <SwitchPreference
+            app:defaultValue="false"
+            app:key="show_tilt_overlay"
+            app:title="顯示傾斜角度"
+            app:summary="顯示手機前後左右傾斜角度（水平儀）" />
+
+        <SwitchPreference
             app:defaultValue="true"
             app:key="show_audio_level"
             app:title="顯示音量條"
