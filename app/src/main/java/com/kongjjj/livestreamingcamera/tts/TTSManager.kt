@@ -67,6 +67,9 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
         if (ignoreEmotes) {
             // 匹配 :name: 格式的表情符號
             processedText = processedText.replace(Regex(":\\w+:"), "")
+            // 匹配 Unicode Emoji (包含常用的表情符號與符號)
+            // 這個正則表達式覆蓋了大部分 Unicode 表情符號範圍
+            processedText = processedText.replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+"), "")
         }
         processedText = processedText.trim()
         if (processedText.isEmpty()) return
