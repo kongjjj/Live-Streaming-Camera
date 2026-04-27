@@ -89,6 +89,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private val ttsIgnoreEmotesKey = "tts_ignore_emotes"
     private val ttsIgnoreSenderKey = "tts_ignore_sender"
     private val spokenMessageIds = mutableSetOf<String>()
+    private lateinit var emoteManager: EmoteManager
+    private var currentChannelId: String? = null
+    private val enable7tvKey = "enable_7tv"
+    private val enableBttvKey = "enable_bttv"
+    private val enableFfzKey = "enable_ffz"
     // 偏好設定鍵名
     private val endpointTypeKey by lazy { getString(R.string.endpoint_type_key) }
     private val showStatsKey = "show_stats_overlay"
@@ -257,6 +262,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        emoteManager = EmoteManager(this)
+        lifecycleScope.launch {
+            emoteManager.loadGlobalEmotes(
+                enable7tv = prefs.getBoolean(enable7tvKey, true),
+                enableBttv = prefs.getBoolean(enableBttvKey, true),
+                enableFfz = prefs.getBoolean(enableFfzKey, true)
+            )
+        }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -918,9 +931,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         val timestamp = extractTimestamp(raw) ?: System.currentTimeMillis()
 
-        // 解析 tags 部分
         var tagsMap = emptyMap<String, String>()
         var restOfMessage = raw
+        var emotesTag: String? = null          // ⬅️ 新增：儲存 emotes 標籤
 
         if (raw.startsWith("@")) {
             val parts = raw.split(" ", limit = 2)
@@ -934,12 +947,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
         }
 
+        // 取出 emotes 標籤
+        emotesTag = tagsMap["emotes"]   // ⬅️ 新增
+
         var messageId = tagsMap["id"] ?: UUID.randomUUID().toString()
         val displayName = tagsMap["display-name"] ?: ""
         var color = tagsMap["color"] ?: "#FFFFFF"
         if (color.isBlank() || !color.startsWith("#")) color = "#$color"
 
-        // 解析 badges
+        // 解析 badges（保持不變）
         val badges = mutableListOf<Badge>()
         tagsMap["badges"]?.split(",")?.forEach { badgeEntry ->
             val parts = badgeEntry.split("/")
@@ -953,27 +969,38 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
         }
 
-        // 提取發送者名稱和訊息
         val prefix = restOfMessage.substringBefore(" PRIVMSG ")
-        val sender = displayName.ifEmpty {
+        val username = if (prefix.startsWith(":")) {
             prefix.substringAfter(":").substringBefore("!")
+        } else {
+            prefix.substringBefore("!")
+        }
+
+        val sender = if (displayName.isNotBlank() && !displayName.equals(username, ignoreCase = true)) {
+            "$displayName($username)"
+        } else {
+            username.ifEmpty { displayName }.ifEmpty { "unknown" }
         }
 
         val messageText = restOfMessage.substringAfter(" :", "").trim()
-
         if (messageId.isEmpty()) messageId = UUID.randomUUID().toString()
 
-        return if (sender.isNotBlank() && messageText.isNotBlank()) {
-            ChatMessage(
+        if (sender.isNotBlank() && messageText.isNotBlank()) {
+            // ⬇️ 新增：解析表情符號，將文字轉為 MessageSegment 列表
+            val segments = emoteManager.parseMessage(messageText, emotesTag)
+
+            return ChatMessage(
                 id = messageId,
                 sender = sender,
                 message = messageText,
                 color = color,
                 isSystem = false,
                 timestamp = timestamp,
-                badges = badges
+                badges = badges,
+                segments = segments   // ⬅️ 傳入解析結果
             )
-        } else null
+        }
+        return null
     }
 
     private fun initChatSettings() {
@@ -987,7 +1014,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private fun setupChat() {
-        chatAdapter = ChatAdapter()
+        chatAdapter = ChatAdapter(lifecycleScope, emoteManager)
         binding.chatRecyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity).apply { stackFromEnd = true }
             adapter = chatAdapter
@@ -1109,6 +1136,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                     if (line.isBlank()) continue
 
                     when {
+                        line.contains("ROOMSTATE") -> {
+                            val roomId = extractRoomId(line)
+                            if (roomId != null && roomId != currentChannelId) {
+                                currentChannelId = roomId
+                                lifecycleScope.launch {
+                                    emoteManager.loadChannelEmotes(roomId, channel)
+                                }
+                            }
+                        }
                         line.startsWith("PING") -> {
                             webSocket.send("PONG :tmi.twitch.tv")
                         }
@@ -1164,7 +1200,19 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                     }
                 }
             }
-
+            private fun extractRoomId(line: String): String? {
+                if (!line.startsWith("@")) return null
+                val spaceIdx = line.indexOf(' ')
+                if (spaceIdx < 0) return null
+                val tags = line.substring(1, spaceIdx).split(";")
+                for (tag in tags) {
+                    val eq = tag.indexOf('=')
+                    if (eq > 0 && tag.substring(0, eq) == "room-id") {
+                        return tag.substring(eq + 1)
+                    }
+                }
+                return null
+            }
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 // 只有當目前頻道仍是連線時的頻道時才觸發重連
                 if (channel == connectingChannel && isChatEnabled) {
