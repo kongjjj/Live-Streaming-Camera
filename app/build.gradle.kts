@@ -12,8 +12,8 @@ android {
         applicationId = "com.kongjjj.livestreamingcamera"
         minSdk = 24
         targetSdk = 36
-        versionCode = 58
-        versionName = "2.4.6"
+        versionCode = 60
+        versionName = "2.4.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.streampack.rtmp)
     implementation(libs.streampack.srt)
     implementation(libs.okhttp)
+    implementation(libs.glide)
     implementation(libs.core.ktx)
     implementation(libs.appcompat)
     implementation(libs.material)
