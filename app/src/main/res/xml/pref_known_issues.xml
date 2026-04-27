@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.47">
+        <Preference
+            android:selectable="false"
+            android:title="加入聊天室訊息emoji顯示，人名後用括號顯示留言者ID。"
+            android:summary=" " />
+
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.46">
         <Preference
             android:selectable="false"
