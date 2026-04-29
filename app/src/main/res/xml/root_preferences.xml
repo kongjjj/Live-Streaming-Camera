@@ -265,19 +265,19 @@
     </PreferenceCategory>
     <PreferenceCategory app:title="畫面顯示">
         <SwitchPreference
-            app:defaultValue="true"
+            app:defaultValue="false"
             app:key="show_battery_overlay"
             app:title="顯示電池資訊"
-            app:summary="在畫面左上角顯示電量、溫度、充電狀態" />
+            app:summary="在畫面右上角顯示電量、溫度、充電狀態" />
 
         <SwitchPreference
-            app:defaultValue="true"
+            app:defaultValue="false"
             app:key="show_network_signal_overlay"
             app:title="顯示網路訊號"
-            app:summary="在畫面左上角顯示WiFi與SIM卡訊號強度" />
+            app:summary="在畫面右上角顯示WiFi與SIM卡訊號強度" />
 
         <SwitchPreference
-            app:defaultValue="true"
+            app:defaultValue="false"
             app:key="hide_status_bar"
             app:title="隱藏狀態欄"
             app:summary="開啟後將自動隱藏手機通知欄（狀態欄），觸碰螢幕可暫時喚出" />

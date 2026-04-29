@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.49">
+        <Preference
+            android:selectable="false"
+            android:title="實作了一個自定義選單遮罩層（Overlay），以防止系統導覽列（Navigation Bar）意外彈出。"
+            android:summary="將標準的 PopupMenu 替換為內建的選單面板。點擊螢幕其他任何地方或使用返回鍵即可快速關閉選單。" />
+
+    </PreferenceCategory>
+    <PreferenceCategory android:title="版本更新 Ver.2.48">
+        <Preference
+            android:selectable="false"
+            android:title="更新聊天室設定介面，調整時可即時看到效果。"
+            android:summary=" " />
+
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.47">
         <Preference
             android:selectable="false"
