@@ -2,7 +2,10 @@ package com.kongjjj.livestreamingcamera
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -23,6 +26,7 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -67,9 +71,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.IntentFilter
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.kongjjj.livestreamingcamera.getBadgeImageRes
 import com.kongjjj.livestreamingcamera.tts.TTSManager
@@ -80,6 +81,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels {
         MainViewModelFactory(this.application)
+    }
+
+    private val backPressedCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            if (binding.settingsContainer.visibility == View.VISIBLE) {
+                toggleSettingsPanel()
+            }
+        }
     }
 
     private val prefs by lazy { PreferenceManager.getDefaultSharedPreferences(this) }
@@ -272,6 +281,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
 
         cameraButtonsContainer = binding.cameraButtonsContainer
 
@@ -1297,11 +1308,38 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 
-    private fun openTwitchChatSettings() {
-        startActivity(Intent(this, TwitchChatSettingsActivity::class.java))
+    fun toggleSettingsPanel() {
+        val container = binding.settingsContainer
+        if (container.visibility == View.VISIBLE) {
+            container.visibility = View.GONE
+            backPressedCallback.isEnabled = false
+        } else {
+            showSidePanel(TwitchChatSettingsFragment())
+        }
     }
+
+    private fun showSidePanel(fragment: androidx.fragment.app.Fragment) {
+        val container = binding.settingsContainer
+        val current = supportFragmentManager.findFragmentById(R.id.settingsContainer)
+        
+        if (container.visibility == View.VISIBLE && current?.javaClass == fragment.javaClass) {
+            container.visibility = View.GONE
+            backPressedCallback.isEnabled = false
+        } else {
+            container.visibility = View.VISIBLE
+            backPressedCallback.isEnabled = true
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.settingsContainer, fragment)
+                .commit()
+        }
+    }
+
+    private fun openTwitchChatSettings() {
+        showSidePanel(TwitchChatSettingsFragment())
+    }
+
     private fun openVersionInfo() {
-        startActivity(Intent(this, VersionInfoActivity::class.java))
+        showSidePanel(VersionInfoFragment())
     }
     fun clearChatHistory() {
         synchronized(chatMessages) {
@@ -1585,6 +1623,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun bindProperties() {
         binding.menuButton.setOnClickListener { showMenuPopup() }
+        binding.bottomCloseSettingsButton.setOnClickListener { toggleSettingsPanel() }
         binding.switchCameraButton.setOnClickListener {
             lifecycleScope.launch { viewModel.switchCamera() }
         }
