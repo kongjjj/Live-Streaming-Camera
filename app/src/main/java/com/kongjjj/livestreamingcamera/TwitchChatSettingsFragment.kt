@@ -15,13 +15,20 @@ class TwitchChatSettingsFragment : PreferenceFragmentCompat() {
 
         val clearPreference = findPreference<Preference>("clear_chat_history")
         clearPreference?.setOnPreferenceClickListener {
-            // 在 SharedPreferences 中設一個標誌，表示需要清除歷史
-            val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            prefs.edit {
-                putBoolean("pending_clear_history", true)
+            // 直接呼叫 MainActivity 的清除方法（如果有的話）
+            if (activity is MainActivity) {
+                (activity as MainActivity).clearChatHistory()
+                // 隱藏設定面板
+                (activity as MainActivity).toggleSettingsPanel()
+            } else {
+                // 原有邏輯：在 SharedPreferences 中設一個標誌，表示需要清除歷史
+                val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                prefs.edit {
+                    putBoolean("pending_clear_history", true)
+                }
+                // 關閉目前 Activity
+                activity?.finish()
             }
-            // 關閉目前 Activity
-            activity?.finish()
             true
         }
     }

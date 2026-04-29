@@ -24,7 +24,6 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
@@ -85,7 +84,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private val backPressedCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
-            if (binding.settingsContainer.visibility == View.VISIBLE) {
+            if (binding.customMenuPanel.visibility == View.VISIBLE) {
+                hideCustomMenu()
+            } else if (binding.settingsContainer.visibility == View.VISIBLE) {
                 toggleSettingsPanel()
             }
         }
@@ -1289,25 +1290,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 
-    private fun showMenuPopup() {
-        PopupMenu(this, binding.menuButton).apply {
-            menu.add(0, 1, 0, "聊天室設定")
-            menu.add(0, 2, 1, "設定")
-            menu.add(0, 3, 2, "版本資訊")
-            menu.add(0, 4, 3, "更新及問題")
-            setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    1 -> openTwitchChatSettings()
-                    2 -> openSettings()
-                    3 -> openVersionInfo()
-                    4 -> showKnownIssues()
-                }
-                true
-            }
-            show()
-        }
-    }
-
     fun toggleSettingsPanel() {
         val container = binding.settingsContainer
         if (container.visibility == View.VISIBLE) {
@@ -1352,6 +1334,21 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             chatAdapter.submitList(emptyList())
         }
         showSystemMessage("聊天歷史已清除")
+    }
+
+    private fun showCustomMenu() {
+        binding.customMenuScrim.visibility = View.VISIBLE
+        binding.customMenuPanel.visibility = View.VISIBLE
+        backPressedCallback.isEnabled = true
+    }
+
+    private fun hideCustomMenu() {
+        binding.customMenuScrim.visibility = View.GONE
+        binding.customMenuPanel.visibility = View.GONE
+        // 只有當設定面板也關閉時，才禁用 backPressedCallback
+        if (binding.settingsContainer.visibility != View.VISIBLE) {
+            backPressedCallback.isEnabled = false
+        }
     }
 
     private fun openSettings() {
@@ -1622,7 +1619,26 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private fun bindProperties() {
-        binding.menuButton.setOnClickListener { showMenuPopup() }
+        binding.menuButton.setOnClickListener { showCustomMenu() }
+        binding.customMenuScrim.setOnClickListener { hideCustomMenu() }
+        
+        binding.menuItemChatSettings.setOnClickListener { 
+            hideCustomMenu()
+            openTwitchChatSettings() 
+        }
+        binding.menuItemSettings.setOnClickListener { 
+            hideCustomMenu()
+            openSettings() 
+        }
+        binding.menuItemVersion.setOnClickListener { 
+            hideCustomMenu()
+            openVersionInfo() 
+        }
+        binding.menuItemIssues.setOnClickListener { 
+            hideCustomMenu()
+            showKnownIssues() 
+        }
+
         binding.bottomCloseSettingsButton.setOnClickListener { toggleSettingsPanel() }
         binding.switchCameraButton.setOnClickListener {
             lifecycleScope.launch { viewModel.switchCamera() }
