@@ -19,7 +19,7 @@ Live Streaming Camera
 - ✔️ 水平角度顯示，可在設定內開關。
   
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
-![Live-Streaming-Camera](pics/Screenshot_2.jpg)
+![Live-Streaming-Camera](pics/Screenshot_4.jpg)
 ## 更多可能加入功能
 
 - 🔜 錄影影片儲存到手機記憶體
