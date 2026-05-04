@@ -17,12 +17,12 @@ Live Streaming Camera
 - ✔️ 手機抖動顯示，可在設定內開關。
 - ✔️ Text-to-Speech聊天訊息朗讀。
 - ✔️ 水平角度顯示，可在設定內開關。
+- ✔️ 錄影影片儲存到手機記憶體
   
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_4.jpg)
 ## 更多可能加入功能
 
-- 🔜 錄影影片儲存到手機記憶體
 - 🔜 拍攝照片
 - 🔜 Overlay
 
