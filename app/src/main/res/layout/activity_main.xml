@@ -163,6 +163,16 @@
             android:contentDescription="@string/chat_switch_desc"
             android:layout_marginBottom="4dp" />
 
+        <!-- 錄影按鈕 -->
+        <ImageButton
+            android:id="@+id/recordButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_recorder_start"
+            android:contentDescription="錄影"
+            android:layout_marginBottom="4dp" />
+
 
     </LinearLayout>
 
@@ -278,6 +288,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 
+
+
     <!-- 串流統計疊加層 -->
     <com.kongjjj.livestreamingcamera.ui.components.StreamStatsOverlay
         android:id="@+id/streamStatsOverlay"
@@ -289,7 +301,6 @@
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
 
     <!-- 右下角相機控制按鈕群 -->
     <LinearLayout
