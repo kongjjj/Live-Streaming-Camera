@@ -42,7 +42,7 @@
     <string name="audio_bitrate_key">audio_bitrate</string>
     <string name="audio_bitrate">音訊位元率 (bps)</string>
     <string name="audio_sample_rate_key">audio_sample_rate</string>
-    <string name="audio_sample_rate">取樣率</string>
+    <string name="audio_sample_rate">取樣率 (OPUS強制使用48000Hz)</string>
     <string name="audio_byte_format">位元格式</string>
     <string name="audio_profile">音訊檔次</string>
     <string name="audio_source_type_key">audio_source_type</string>
@@ -67,7 +67,7 @@
     <string name="audio_encoder_key">audio_encoder</string>
     <string name="audio_byte_format_key">audio_byte_format</string>
     <string name="audio_profile_key">audio_profile</string>
-    <string name="audio_encoder_title">音訊編碼器</string>
+    <string name="audio_encoder_title">音訊編碼器 (OPUS只能用在SRT直播)</string>
     <string name="audio_byte_format_title">位元格式</string>
     <string name="audio_profile_title">音訊檔次</string>
     <string name="audio_profile_category">編碼檔次</string>
@@ -93,7 +93,9 @@
     <string name="default_rtmp_url">rtmp://your-server.com/live/stream</string>
     <string name="file_endpoint_key">file_endpoint</string>
     <string name="file">檔案</string>
-    <string name="file_name_key">file_name</string>
+    <string name="file_name_key">recording_storage_location</string>
+    <string name="recording_start">開始錄影</string>
+    <string name="recording_stop">停止錄影</string>
     <string name="file_name">檔案名稱</string>
     <string name="default_file_name">record.mp4</string>
     <string name="menu_twitch_channel">Twitch 頻道設定</string>
