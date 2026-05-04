@@ -12,8 +12,8 @@ android {
         applicationId = "com.kongjjj.livestreamingcamera"
         minSdk = 24
         targetSdk = 36
-        versionCode = 61
-        versionName = "2.4.8"
+        versionCode = 65
+        versionName = "2.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,6 +66,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.0.0")
+    implementation("androidx.documentfile:documentfile:1.1.0")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
