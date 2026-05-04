@@ -13,6 +13,7 @@ import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.Uri
 import android.util.Log
 import android.util.Range
 import android.util.Size
@@ -34,11 +35,21 @@ import io.github.thibaultbee.streampack.core.configuration.BitrateRegulatorConfi
 import io.github.thibaultbee.streampack.core.elements.sources.video.camera.ICameraSource
 import io.github.thibaultbee.streampack.core.interfaces.setCameraId
 import io.github.thibaultbee.streampack.core.interfaces.startStream
-import io.github.thibaultbee.streampack.core.streamers.single.AudioConfig
-import io.github.thibaultbee.streampack.core.streamers.single.SingleStreamer
-import io.github.thibaultbee.streampack.core.streamers.single.VideoConfig
-import io.github.thibaultbee.streampack.core.streamers.single.IAudioSingleStreamer
-import io.github.thibaultbee.streampack.core.streamers.single.IVideoSingleStreamer
+import io.github.thibaultbee.streampack.core.configuration.mediadescriptor.UriMediaDescriptor
+import io.github.thibaultbee.streampack.core.elements.encoders.AudioCodecConfig
+import io.github.thibaultbee.streampack.core.elements.encoders.VideoCodecConfig
+import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamer
+import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamerAudioCodecConfig
+import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamerAudioConfig
+import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamerVideoConfig
+import io.github.thibaultbee.streampack.core.streamers.dual.IAudioDualStreamer
+import io.github.thibaultbee.streampack.core.streamers.dual.IVideoDualStreamer
+import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableAudioEncodingPipelineOutput
+import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableVideoEncodingPipelineOutput
+import androidx.documentfile.provider.DocumentFile
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import io.github.thibaultbee.streampack.core.utils.extensions.isClosedException
 import io.github.thibaultbee.srtdroid.core.models.Stats
 import kotlinx.coroutines.*
@@ -48,6 +59,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 data class StreamStats(
     val bitrateKbps: Int = 0,
+    val maxBitrateKbps: Int = 0,
     val rttMs: Int? = null,
     val lossPercent: Float? = null,
     val sendRateMbps: Float? = null,
@@ -58,7 +70,7 @@ data class StreamStats(
 class MainViewModel(
     application: Application,
     private val rotationRepository: RotationRepository,
-    val streamer: SingleStreamer
+    val streamer: DualStreamer
 ) : AndroidViewModel(application) {
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultDispatcher = Dispatchers.Default
@@ -66,9 +78,9 @@ class MainViewModel(
     private val endpointTypeKey by lazy { getApplication<Application>().getString(R.string.endpoint_type_key) }
     private val rtmpUrlKey by lazy { getApplication<Application>().getString(R.string.rtmp_server_url_key) }
 
-    @Suppress("unused") private val audioEncoderKey = "audio_encoder_key"
-    @Suppress("unused") private val audioSampleRateKey = "audio_sample_rate_key"
-    @Suppress("unused") private val audioBitrateKey = "audio_bitrate_key"
+    private val audioEncoderKey by lazy { getApplication<Application>().getString(R.string.audio_encoder_key) }
+    private val audioSampleRateKey by lazy { getApplication<Application>().getString(R.string.audio_sample_rate_key) }
+    private val audioBitrateKey by lazy { getApplication<Application>().getString(R.string.audio_bitrate_key) }
     private val videoResolutionKey by lazy { getApplication<Application>().getString(R.string.video_resolution_key) }
     private val videoFpsKey by lazy { getApplication<Application>().getString(R.string.video_fps_key) }
     private val videoBitrateKey by lazy { getApplication<Application>().getString(R.string.video_bitrate_key) }
@@ -78,13 +90,14 @@ class MainViewModel(
     private val srtVideoMinBitrateKey = "srt_video_min_bitrate"
     private val srtRegulatorModeKey = "srt_regulator_mode"
     private val isStreaming: Boolean
-        get() = isStreamingLiveData.value == true
+        get() = streamer.first.isStreamingFlow.value
     private var currentCameraId: String? = null
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var wasStreamingBeforeNetworkLost = false
 
     private var isStreamRetrying = false
+    private var isRecordingActionPending = false
     private var streamRetryJob: Job? = null
     private var userStoppedManually = false
     private val _reconnectingMessage = MutableLiveData<String?>()
@@ -132,6 +145,12 @@ class MainViewModel(
             prefs.edit().putString("video_encoder_key", "h264").apply()
         }
         setupNetworkMonitoring()
+        viewModelScope.launch {
+            streamer.first.isStreamingFlow.collect { 
+                updateStreamingState(it)
+                if (it) startStatsCollection() else stopStatsCollection()
+            }
+        }
         viewModelScope.launch {
             streamer.throwableFlow.filterNotNull().filter { it.isClosedException }.collect { _ ->
                 if (!userStoppedManually) startStreamRetry()
@@ -189,29 +208,46 @@ class MainViewModel(
             while (isActive) {
                 try {
                     val endpointType = prefs.getString(endpointTypeKey, "rtmp") ?: "rtmp"
-                    val bitrate = (streamer.videoEncoder?.bitrate ?: 0) / 1000
-
-                    val stats = if (endpointType == "srt") {
-                        // endpoint 是非空型別，直接使用，不需要 ?. 安全呼叫
-                        val metrics = streamer.endpoint.metrics
-                        if (metrics is Stats) {
-                            val loss = if (metrics.pktSent > 0) {
-                                (metrics.pktSndLoss.toFloat() / metrics.pktSent) * 100
-                            } else 0f
-                            val rttMs = metrics.msRTT.toInt()
-                            val sendRate = metrics.mbpsSendRate.toFloat()
-                            StreamStats(
-                                bitrateKbps = bitrate,
-                                rttMs = rttMs,
-                                lossPercent = loss,
-                                sendRateMbps = sendRate,
-                                endpointType = "srt"
-                            )
+                    val videoEncoder = (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
+                    val currentBitrate = (videoEncoder?.bitrate ?: 0) / 1000
+                    val maxBitrate = if (endpointType == "srt") {
+                        val regulatorEnabled = prefs.getBoolean(srtRegulatorEnabledKey, false)
+                        if (regulatorEnabled) {
+                            (prefs.getString(srtVideoTargetBitrateKey, "5000") ?: "5000").toInt()
                         } else {
-                            StreamStats(bitrateKbps = bitrate, endpointType = "srt")
+                            prefs.getInt(videoBitrateKey, 2000)
                         }
                     } else {
-                        StreamStats(bitrateKbps = bitrate, endpointType = endpointType)
+                        prefs.getInt(videoBitrateKey, 2000)
+                    }
+
+                    val stats = if (endpointType == "srt") {
+                        // 從第一個管道的 endpoint 直接拿 metrics
+                        val metrics = streamer.first.endpoint.metrics
+                        // 嘗試偵測是否包含 Stats 相關方法
+                        try {
+                            // 優先嘗試直接讀取欄位或 getter
+                            val cls = metrics.javaClass
+                            val msRTT = try { cls.getMethod("getMsRTT").invoke(metrics) as Long } catch (_: Exception) { cls.getField("msRTT").get(metrics) as Long }
+                            val pktSndLoss = try { cls.getMethod("getPktSndLoss").invoke(metrics) as Long } catch (_: Exception) { cls.getField("pktSndLoss").get(metrics) as Long }
+                            val pktSent = try { cls.getMethod("getPktSent").invoke(metrics) as Long } catch (_: Exception) { cls.getField("pktSent").get(metrics) as Long }
+                            val mbpsSendRate = try { cls.getMethod("getMbpsSendRate").invoke(metrics) as Double } catch (_: Exception) { cls.getField("mbpsSendRate").get(metrics) as Double }
+
+                            val loss = if (pktSent > 0) (pktSndLoss.toFloat() / pktSent) * 100 else 0f
+                            StreamStats(
+                                bitrateKbps = currentBitrate,
+                                maxBitrateKbps = maxBitrate,
+                                rttMs = msRTT.toInt(),
+                                lossPercent = loss,
+                                sendRateMbps = mbpsSendRate.toFloat(),
+                                endpointType = "srt"
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "解析 SRT 統計失敗: ${e.message}")
+                            StreamStats(bitrateKbps = currentBitrate, maxBitrateKbps = maxBitrate, endpointType = "srt")
+                        }
+                    } else {
+                        StreamStats(bitrateKbps = currentBitrate, maxBitrateKbps = maxBitrate, endpointType = endpointType)
                     }
 
                     _streamStats.postValue(stats)
@@ -230,8 +266,8 @@ class MainViewModel(
     @Suppress("unused")
     fun getVideoEncoderInputSurface(): Surface? {
         return try {
-            val encoder = streamer.videoEncoder
-            val getSurfaceMethod = encoder?.javaClass?.methods?.find { it.name == "getInputSurface" || it.name == "inputSurface" }
+            val encoder = (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
+            val getSurfaceMethod = encoder?.let { it::class.java }?.methods?.find { it.name == "getInputSurface" || it.name == "inputSurface" }
             getSurfaceMethod?.invoke(encoder) as? Surface
         } catch (e: Exception) {
             Log.e(TAG, "獲取編碼器 Surface 失敗", e)
@@ -279,8 +315,8 @@ class MainViewModel(
             while (isStreamRetrying && !userStoppedManually) {
                 _reconnectingMessage.postValue("網路切換，重新連線中...")
                 try {
-                    if (streamer.isStreamingFlow.value) streamer.stopStream()
-                    streamer.close()
+                    if (streamer.first.isStreamingFlow.value) streamer.first.stopStream()
+                    streamer.first.close()
                     delay(500)
                     applyCurrentConfig()
                     val success = startStreamInternal(shouldSuppressErrors = true)
@@ -301,10 +337,16 @@ class MainViewModel(
     }
 
     private suspend fun startStreamInternal(shouldSuppressErrors: Boolean = false): Boolean {
-        if (!isConfigApplied) {
+        // 啟動前強制重新掛載音訊來源並套用配置，解決 RTMP 間中無聲問題
+        try {
+            streamer.setAudioSource(ConditionalAudioSourceFactory())
+            delay(100) 
             applyCurrentConfig()
-            isConfigApplied = true
+        } catch (e: Exception) {
+            Log.e(TAG, "初始化音訊或配置失敗", e)
         }
+
+        isConfigApplied = true
         val endpointType = prefs.getString(endpointTypeKey, "rtmp") ?: "rtmp"
         val url = if (endpointType == "srt") {
             // 讀取選擇的 SRT URL 索引
@@ -320,15 +362,15 @@ class MainViewModel(
             prefs.getString(rtmpKey, "") ?: ""
         }
 
-        streamer.removeBitrateRegulatorController()
-        if (endpointType == "srt") createSrtRegulatorFactory()?.let { streamer.addBitrateRegulatorController(it) }
+        streamer.first.removeBitrateRegulatorController()
+        if (endpointType == "srt") createSrtRegulatorFactory()?.let { streamer.first.addBitrateRegulatorController(it) }
 
         return try {
-            streamer.startStream(url)
+            streamer.first.startStream(url)
 
             // 等待編碼器初始化（使用介面）
-            val videoStreamer = streamer as? IVideoSingleStreamer
-            val audioStreamer = streamer as? IAudioSingleStreamer
+            val videoStreamer = streamer.first as? IConfigurableVideoEncodingPipelineOutput
+            val audioStreamer = streamer.first as? IConfigurableAudioEncodingPipelineOutput
 
             val encoderReady = withTimeoutOrNull(5000L) {
                 while (videoStreamer?.videoEncoder == null || audioStreamer?.audioEncoder == null) {
@@ -397,14 +439,16 @@ class MainViewModel(
         streamRetryJob?.cancel()
         stopStatsCollection()
         try {
-            if (streamer.isStreamingFlow.value) streamer.stopStream()
-            streamer.close()
+            if (streamer.first.isStreamingFlow.value) streamer.first.stopStream()
+            streamer.first.close()
         } catch (_: Exception) { }
         _isTryingConnectionLiveData.postValue(false)
         isConfigApplied = false
     }
 
-    val isStreamingLiveData: LiveData<Boolean> = streamer.isStreamingFlow.asLiveData()
+    val isStreamingLiveData: LiveData<Boolean> = streamer.first.isStreamingFlow.asLiveData()
+    private val _isRecordingLiveData = MutableLiveData<Boolean>(false)
+    val isRecordingLiveData: LiveData<Boolean> = streamer.second.isStreamingFlow.asLiveData()
     private val _isTryingConnectionLiveData = MutableLiveData<Boolean>()
     val isTryingConnectionLiveData: LiveData<Boolean> = _isTryingConnectionLiveData
 
@@ -430,12 +474,52 @@ class MainViewModel(
             Log.w(TAG, "Cannot change audio config while streaming")
             return
         }
-        val audioConfig = AudioConfig(
-            mimeType = MediaFormat.MIMETYPE_AUDIO_AAC,
-            sampleRate = (prefs.getString("audio_sample_rate_key", "44100") ?: "44100").toInt(),
-            channelConfig = AudioFormat.CHANNEL_IN_STEREO
-        )
-        streamer.setAudioConfig(audioConfig)
+
+        val encoderType = prefs.getString(audioEncoderKey, "aac") ?: "aac"
+        val liveMimeType = when (encoderType) {
+            "opus" -> MediaFormat.MIMETYPE_AUDIO_OPUS
+            else -> MediaFormat.MIMETYPE_AUDIO_AAC
+        }
+
+        // Opus 必須使用 48000Hz，如果直播用 Opus，採樣率強制為 48k (AAC 也支援 48k)
+        val sampleRate = if (liveMimeType == MediaFormat.MIMETYPE_AUDIO_OPUS) {
+            48000
+        } else {
+            (prefs.getString(audioSampleRateKey, "44100") ?: "44100").toInt()
+        }
+
+        val bitrate = (prefs.getString(audioBitrateKey, "128000") ?: "128000").toInt()
+
+        if (streamer.second.isStreamingFlow.value) {
+            // 錄影中，僅更新直播管道
+            val config = AudioCodecConfig(
+                mimeType = liveMimeType,
+                sampleRate = sampleRate,
+                channelConfig = AudioFormat.CHANNEL_IN_STEREO,
+                startBitrate = bitrate
+            )
+            (streamer.first as? IConfigurableAudioEncodingPipelineOutput)?.setAudioCodecConfig(config)
+        } else {
+            // 未錄影，設定雙管道獨立編碼器
+            // 第一管道 (直播): 使用用戶選擇的編碼器 (AAC 或 OPUS)
+            val liveCodec = DualStreamerAudioCodecConfig(
+                mimeType = liveMimeType,
+                startBitrate = bitrate
+            )
+            // 第二管道 (錄影): 強制使用 AAC 以確保 MP4 相容性
+            val recordCodec = DualStreamerAudioCodecConfig(
+                mimeType = MediaFormat.MIMETYPE_AUDIO_AAC,
+                startBitrate = 128_000
+            )
+
+            val dualConfig = DualStreamerAudioConfig(
+                firstAudioCodecConfig = liveCodec,
+                secondAudioCodecConfig = recordCodec,
+                sampleRate = sampleRate,
+                channelConfig = AudioFormat.CHANNEL_IN_STEREO
+            )
+            streamer.setAudioConfig(dualConfig)
+        }
     }
 
     suspend fun setVideoConfig() {
@@ -455,13 +539,17 @@ class MainViewModel(
             else -> MediaFormat.MIMETYPE_VIDEO_AVC
         }
 
-        val videoConfig = VideoConfig(
+        val config = VideoCodecConfig(
             mimeType = mimeType,
             resolution = Size(width, height),
             fps = (prefs.getString(videoFpsKey, "25") ?: "25").toInt()
         )
         Log.d(TAG, "設定影片編碼: $mimeType, 解析度: ${width}x${height}")
-        streamer.setVideoConfig(videoConfig)
+        if (streamer.second.isStreamingFlow.value) {
+            (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.setVideoCodecConfig(config)
+        } else {
+            streamer.setVideoConfig(DualStreamerVideoConfig(config))
+        }
     }
 
     suspend fun setAudioSource() { streamer.setAudioSource(ConditionalAudioSourceFactory()) }
@@ -529,6 +617,70 @@ class MainViewModel(
         _isMuted.value = newMute
         try { streamer.audioInput?.isMuted = newMute } catch (_: Exception) { }
         return newMute
+    }
+
+    fun toggleRecording() {
+        if (isRecordingActionPending) return
+        isRecordingActionPending = true
+        
+        viewModelScope.launch {
+            try {
+                if (streamer.second.isStreamingFlow.value) {
+                    try {
+                        streamer.second.stopStream()
+                        streamer.second.close()
+                        _toastMessage.postValue("錄影已停止")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to stop recording", e)
+                        _toastMessage.postValue("停止錄影失敗: ${e.message}")
+                    }
+                } else {
+                    val storageUriString = prefs.getString(getApplication<Application>().getString(R.string.file_name_key), null)
+                    if (storageUriString == null) {
+                        _toastMessage.postValue("請先在設定中選擇儲存位置")
+                        isRecordingActionPending = false
+                        return@launch
+                    }
+
+                    try {
+                        val storageUri = Uri.parse(storageUriString)
+                        val directory = DocumentFile.fromTreeUri(getApplication(), storageUri)
+                        if (directory == null || !directory.canWrite()) {
+                            _toastMessage.postValue("儲存位置無法寫入")
+                            isRecordingActionPending = false
+                            return@launch
+                        }
+
+                        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                        val fileName = "REC_$timestamp.mp4"
+                        val file = directory.createFile("video/mp4", fileName)
+                        if (file == null) {
+                            _toastMessage.postValue("無法建立錄影檔案")
+                            isRecordingActionPending = false
+                            return@launch
+                        }
+
+                        // 確保錄影管道被徹底重置並套用最新配置
+                        try {
+                            streamer.second.stopStream()
+                            streamer.second.close()
+                        } catch (_: Exception) {}
+
+                        applyCurrentConfig()
+
+                        streamer.second.startStream(UriMediaDescriptor(getApplication(), file.uri))
+                        _toastMessage.postValue("錄影開始: $fileName")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to start recording", e)
+                        _toastMessage.postValue("開始錄影失敗: ${e.message}")
+                    }
+                }
+            } finally {
+                // 延遲一段時間再允許下一次操作，避免快速重複點擊導致狀態混亂
+                delay(1000)
+                isRecordingActionPending = false
+            }
+        }
     }
 
     override fun onCleared() {

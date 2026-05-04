@@ -299,6 +299,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         setupCameraControls()
         setupBluetoothButton()
         setupZoomButton()
+        setupRecordButton()
 
         viewModel.reconnectingMessage.observe(this) { message ->
             message?.let { toast(it) }
@@ -329,8 +330,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         viewModel.toastMessage.observe(this) { message ->
             message?.let { toast(it) }
         }
-        viewModel.streamStats.observe(this) { stats ->
-            binding.streamStatsOverlay.updateStats(stats)
+        viewModel.isRecordingLiveData.observe(this) { isRecording ->
+            binding.recordButton.setImageResource(
+                if (isRecording) R.drawable.ic_recorder_stop else R.drawable.ic_recorder_start
+            )
         }
         ttsManager = TTSManager(this)
         updateStatsOverlayVisibility()
@@ -760,6 +763,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 viewModel.setZoomRatio(targetZoom)
                 toast(String.format(Locale.US, "變焦: %.1fx", targetZoom))
             }
+        }
+    }
+
+    private fun setupRecordButton() {
+        binding.recordButton.setOnClickListener {
+            viewModel.toggleRecording()
         }
     }
 

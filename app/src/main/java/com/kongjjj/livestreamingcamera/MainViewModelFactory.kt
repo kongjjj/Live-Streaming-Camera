@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.kongjjj.livestreamingcamera.data.rotation.RotationRepository  // ✅ 修正這裡
-import io.github.thibaultbee.streampack.core.streamers.single.SingleStreamer
+import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamer
 
 /**
  * 用於從 [android.app.Application] 建構 [MainViewModel] 的工廠
@@ -26,8 +26,8 @@ class MainViewModelFactory(private val application: Application) :
         /**
          * 建立推流器實例
          */
-        private fun createStreamer(application: Application): SingleStreamer {
-            return SingleStreamer(application, withAudio = true, withVideo = true)
+        private fun createStreamer(application: Application): DualStreamer {
+            return DualStreamer(application, withAudio = true, withVideo = true)
         }
     }
 }
