@@ -251,16 +251,14 @@
 
         </PreferenceCategory>
 
-        <!-- 檔案錄製端點 -->
+        <!-- 檔案錄製儲存位置 -->
         <PreferenceCategory
             app:key="@string/file_endpoint_key"
-            app:title="@string/file">
+            app:title="檔案錄製儲存位置">
 
-            <EditTextPreference
-                app:defaultValue="@string/default_file_name"
+            <Preference
                 app:key="@string/file_name_key"
-                app:title="@string/file_name"
-                app:useSimpleSummaryProvider="true" />
+                app:title="選擇儲存位置" />
         </PreferenceCategory>
     </PreferenceCategory>
     <PreferenceCategory app:title="畫面顯示">
@@ -285,7 +283,7 @@
         <SwitchPreference
             app:defaultValue="false"
             app:key="show_stats_overlay"
-            app:title="SRT顯示串流統計"
+            app:title="SRT,RTMP 顯示串流統計"
             app:summary="在畫面左上角顯示即時位元率、RTT 等資訊" />
 
         <SwitchPreference

@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.50">
+        <Preference
+            android:selectable="false"
+            android:title="主要變更包括：1.升級推流器：將 SingleStreamer 改為 DualStreamer"
+            android:summary="以支援獨立的直播與錄影管道。將檔案錄製設定改為「選擇儲存位置」，支援透過 Android 檔案選擇器挑選資料夾。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="2.自動儲存：錄影時會自動在指定資料夾產生帶有時間戳記的 MP4 檔案。"
+            android:summary="  " />
+
+        <Preference
+            android:selectable="false"
+            android:title="3. 修正Android16 版本RTMP不能直接直播到Twitch的問題。"
+            android:summary="如果SRT、RTMP轉換後沒聲音，請kill app再開啟。" />
+
+        <Preference
+            android:selectable="false"
+            android:title="4. 修正OPUS 音訊格式選項未有反應。"
+            android:summary="現在SRT可選AAC和OPUS、RTMP只可用AAC，若選了OPUS會沒聲音。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.49">
         <Preference
             android:selectable="false"
@@ -122,20 +143,15 @@
     </PreferenceCategory>
     <PreferenceCategory android:title="已知問題">
 
-        <Preference
+       <Preference
             android:selectable="false"
-            android:title="1. OPUS 音訊格式選項未有反應。"
-            android:summary="目前 Opus 編碼器在部分裝置上無法正常運作。" />
-
-        <Preference
-            android:selectable="false"
-            android:title="2. Android 16 版本不能使用白平衡，按鈕無反應。"
+            android:title="1. Android 16 版本不能使用白平衡，按鈕無反應。"
             android:summary="此為系統限制，後續版本將嘗試修復。" />
 
         <Preference
             android:selectable="false"
-            android:title="3. Android 16 版本RTMP不能直接直播到Twitch。"
-            android:summary="問題不明，後續版本將嘗試修復。" />
+            android:title="　　　　　　　　　　　　　　　　"
+            android:summary="　　　　　　　　　　　　　　　　" />
 
 
     </PreferenceCategory>
