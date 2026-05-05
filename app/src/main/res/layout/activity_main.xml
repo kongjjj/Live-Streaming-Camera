@@ -173,6 +173,16 @@
             android:contentDescription="錄影"
             android:layout_marginBottom="4dp" />
 
+        <!-- 拍照按鈕 -->
+        <ImageButton
+            android:id="@+id/snapshotButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_camera"
+            android:contentDescription="@string/snapshot"
+            android:layout_marginBottom="4dp" />
+
 
     </LinearLayout>
 
