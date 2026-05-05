@@ -374,7 +374,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         super.onResume()
         if (viewModel.isStreamingLiveData.value == true) {
             Log.d(TAG, "Streaming in progress, skipping audio/video reconfiguration")
-            // 注意：不要直接 return，因為還是需要處理聊天歷史等
+        } else {
+            // 當不在推流時，檢查並套用最新的相機/編碼設定
+            if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+                checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                lifecycleScope.launch {
+                    viewModel.applyCurrentConfig()
+                }
+            }
         }
         if (prefs.getBoolean("pending_clear_history", false)) {
             prefs.edit { remove("pending_clear_history") }
@@ -696,6 +703,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             hideStatusBarKey -> applyStatusBarVisibility()
             showShakeLevelKey -> updateOverlayVisibility()
             showAudioLevelKey -> updateOverlayVisibility()
+            viewModel.videoResolutionKey, viewModel.videoFpsKey, viewModel.videoBitrateKey,
+            viewModel.audioEncoderKey, viewModel.audioSampleRateKey, viewModel.audioBitrateKey -> {
+                viewModel.invalidateConfig()
+            }
         }
     }
 
@@ -769,6 +780,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun setupRecordButton() {
         binding.recordButton.setOnClickListener {
             viewModel.toggleRecording()
+        }
+        binding.snapshotButton.setOnClickListener {
+            viewModel.takePhoto()
         }
     }
 
@@ -1500,6 +1514,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.focusButton.setImageDrawable(null)
         binding.focusButton.alpha = 0f
 
+        binding.snapshotButton.background = null
+        binding.snapshotButton.setImageDrawable(null)
+        binding.snapshotButton.alpha = 0f
+
         binding.muteButton.background = null
         binding.muteButton.setImageDrawable(null)
         binding.muteButton.alpha = 0f
@@ -1548,6 +1566,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.focusButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         updateFocusButton()
         binding.focusButton.alpha = 1.0f
+
+        binding.snapshotButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.snapshotButton.setImageResource(R.drawable.ic_camera)
+        binding.snapshotButton.alpha = 1.0f
 
         binding.muteButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         updateMuteIcon()

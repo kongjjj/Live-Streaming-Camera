@@ -46,6 +46,7 @@ import io.github.thibaultbee.streampack.core.streamers.dual.IAudioDualStreamer
 import io.github.thibaultbee.streampack.core.streamers.dual.IVideoDualStreamer
 import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableAudioEncodingPipelineOutput
 import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableVideoEncodingPipelineOutput
+import io.github.thibaultbee.streampack.core.pipelines.inputs.takeJpegSnapshot
 import androidx.documentfile.provider.DocumentFile
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -75,15 +76,15 @@ class MainViewModel(
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultDispatcher = Dispatchers.Default
 
-    private val endpointTypeKey by lazy { getApplication<Application>().getString(R.string.endpoint_type_key) }
-    private val rtmpUrlKey by lazy { getApplication<Application>().getString(R.string.rtmp_server_url_key) }
+    internal val endpointTypeKey by lazy { getApplication<Application>().getString(R.string.endpoint_type_key) }
+    internal val rtmpUrlKey by lazy { getApplication<Application>().getString(R.string.rtmp_server_url_key) }
 
-    private val audioEncoderKey by lazy { getApplication<Application>().getString(R.string.audio_encoder_key) }
-    private val audioSampleRateKey by lazy { getApplication<Application>().getString(R.string.audio_sample_rate_key) }
-    private val audioBitrateKey by lazy { getApplication<Application>().getString(R.string.audio_bitrate_key) }
-    private val videoResolutionKey by lazy { getApplication<Application>().getString(R.string.video_resolution_key) }
-    private val videoFpsKey by lazy { getApplication<Application>().getString(R.string.video_fps_key) }
-    private val videoBitrateKey by lazy { getApplication<Application>().getString(R.string.video_bitrate_key) }
+    internal val audioEncoderKey by lazy { getApplication<Application>().getString(R.string.audio_encoder_key) }
+    internal val audioSampleRateKey by lazy { getApplication<Application>().getString(R.string.audio_sample_rate_key) }
+    internal val audioBitrateKey by lazy { getApplication<Application>().getString(R.string.audio_bitrate_key) }
+    internal val videoResolutionKey by lazy { getApplication<Application>().getString(R.string.video_resolution_key) }
+    internal val videoFpsKey by lazy { getApplication<Application>().getString(R.string.video_fps_key) }
+    internal val videoBitrateKey by lazy { getApplication<Application>().getString(R.string.video_bitrate_key) }
     private val srtLatencyKey = "srt_latency"
     private val srtRegulatorEnabledKey = "srt_regulator_enabled"
     private val srtVideoTargetBitrateKey = "srt_video_target_bitrate"
@@ -103,6 +104,9 @@ class MainViewModel(
     private val _reconnectingMessage = MutableLiveData<String?>()
     val reconnectingMessage: LiveData<String?> = _reconnectingMessage
     private var isConfigApplied = false
+
+    private var lastAppliedResolution: Size? = null
+    private var lastAppliedFps: Int? = null
 
     private val bluetoothHelper by lazy { BluetoothAudioHelper(getApplication()) { _bluetoothPermissionRequest.postValue(Unit) } }
     private val _bluetoothEnabled = MutableLiveData(false)
@@ -459,13 +463,18 @@ class MainViewModel(
     // 關閉性錯誤（會觸發重連）
     val closedThrowableLiveData: LiveData<Throwable> = streamer.throwableFlow.filterNotNull().filter { it.isClosedException }.asLiveData()
 
-    private suspend fun applyCurrentConfig() {
+    fun invalidateConfig() {
+        isConfigApplied = false
+    }
+
+    suspend fun applyCurrentConfig() {
         if (isStreaming) {
             Log.w(TAG, "Cannot apply config while streaming")
             return
         }
         setAudioConfig()
         setVideoConfig()
+        isConfigApplied = true
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
@@ -539,17 +548,29 @@ class MainViewModel(
             else -> MediaFormat.MIMETYPE_VIDEO_AVC
         }
 
+        val fps = (prefs.getString(videoFpsKey, "25") ?: "25").toInt()
+
         val config = VideoCodecConfig(
             mimeType = mimeType,
             resolution = Size(width, height),
-            fps = (prefs.getString(videoFpsKey, "25") ?: "25").toInt()
+            fps = fps
         )
         Log.d(TAG, "設定影片編碼: $mimeType, 解析度: ${width}x${height}")
+
+        val resolutionChanged = lastAppliedResolution != Size(width, height) || lastAppliedFps != fps
+
         if (streamer.second.isStreamingFlow.value) {
             (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.setVideoCodecConfig(config)
         } else {
             streamer.setVideoConfig(DualStreamerVideoConfig(config))
+            // 如果解析度或 FPS 改變，且當前未推流/錄影，則重新設定相機以確保預覽和拍照使用新解析度
+            if (resolutionChanged && !isStreaming) {
+                currentCameraId?.let { streamer.setCameraId(it) }
+            }
         }
+
+        lastAppliedResolution = Size(width, height)
+        lastAppliedFps = fps
     }
 
     suspend fun setAudioSource() { streamer.setAudioSource(ConditionalAudioSourceFactory()) }
@@ -679,6 +700,60 @@ class MainViewModel(
                 // 延遲一段時間再允許下一次操作，避免快速重複點擊導致狀態混亂
                 delay(1000)
                 isRecordingActionPending = false
+            }
+        }
+    }
+
+    fun takePhoto() {
+        viewModelScope.launch {
+            if (streamer.second.isStreamingFlow.value) {
+                _toastMessage.postValue("錄影中，無法拍照")
+                return@launch
+            }
+
+            // 拍照前確保套用最新配置
+            applyCurrentConfig()
+
+            val storageUriString = prefs.getString(getApplication<Application>().getString(R.string.file_name_key), null)
+            if (storageUriString == null) {
+                _toastMessage.postValue("請先在設定中選擇儲存位置")
+                return@launch
+            }
+
+            try {
+                val storageUri = Uri.parse(storageUriString)
+                val directory = DocumentFile.fromTreeUri(getApplication(), storageUri)
+                if (directory == null || !directory.canWrite()) {
+                    _toastMessage.postValue("儲存位置無法寫入")
+                    return@launch
+                }
+
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                val fileName = "IMG_$timestamp.jpg"
+                val file = directory.createFile("image/jpeg", fileName)
+                if (file == null) {
+                    _toastMessage.postValue("無法建立照片檔案")
+                    return@launch
+                }
+
+                getApplication<Application>().contentResolver.openOutputStream(file.uri)?.use { outputStream ->
+                    streamer.videoInput?.let { videoInput ->
+                        // 這裡可以根據需要調整旋轉角度，目前設為 0
+                        videoInput.takeJpegSnapshot(
+                            outputStream,
+                            quality = 100,
+                            rotationDegrees = 0
+                        )
+                        _toastMessage.postValue("照片已儲存: $fileName")
+                    } ?: run {
+                        _toastMessage.postValue("截圖失敗：影像輸入未就緒")
+                    }
+                } ?: run {
+                    _toastMessage.postValue("無法打開檔案輸出流")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to take photo", e)
+                _toastMessage.postValue("拍照失敗: ${e.message}")
             }
         }
     }
