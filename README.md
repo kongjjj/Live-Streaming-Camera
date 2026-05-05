@@ -18,12 +18,12 @@ Live Streaming Camera
 - ✔️ Text-to-Speech聊天訊息朗讀。
 - ✔️ 水平角度顯示，可在設定內開關。
 - ✔️ 直播時可分別錄影影片儲存到手機記憶體內。
+- ✔️ 拍攝照片
   
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_4.jpg)
 ## 更多可能加入功能
 
-- 🔜 拍攝照片
 - 🔜 Overlay
 
 
