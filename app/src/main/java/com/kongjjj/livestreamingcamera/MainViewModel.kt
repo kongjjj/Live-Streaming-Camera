@@ -130,7 +130,7 @@ class MainViewModel(
     val whiteBalanceMode: LiveData<WhiteBalanceMode> = _whiteBalanceMode
     private val _exposureCompensation = MutableLiveData(0)
     val exposureCompensation: LiveData<Int> = _exposureCompensation
-    private val _focusMode = MutableLiveData(FocusMode.CONTINUOUS)
+    private val _focusMode = MutableLiveData(FocusMode.AUTO)
     val focusMode: LiveData<FocusMode> = _focusMode
     private val _isMuted = MutableLiveData(false)
     val isMuted: LiveData<Boolean> = _isMuted

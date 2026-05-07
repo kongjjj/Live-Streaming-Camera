@@ -1412,6 +1412,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun setupCameraControls() {
         binding.blackScreenButton.setOnClickListener { toggleBlackOverlay() }
 
+        binding.cameraSettingButton.setOnClickListener {
+            binding.hiddenCameraControls.visibility = if (binding.hiddenCameraControls.visibility == View.VISIBLE) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+        }
+
         binding.flashButton.setOnClickListener {
             val newMode = viewModel.toggleFlash()
             updateFlashIcon()
@@ -1489,10 +1497,18 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.topRightButtonContainer.visibility = View.GONE
         binding.batteryOverlay.visibility = View.GONE
         binding.shakeLevelOverlay.visibility = View.GONE
+
+        // 隱藏隱藏式相機控制列
+        binding.hiddenCameraControls.visibility = View.GONE
+
         // 隱藏右下角所有控制按鈕（包含直播按鈕、切換鏡頭等）
         binding.blackScreenButton.background = null
         binding.blackScreenButton.setImageDrawable(null)
         binding.blackScreenButton.alpha = 0f
+
+        binding.cameraSettingButton.background = null
+        binding.cameraSettingButton.setImageDrawable(null)
+        binding.cameraSettingButton.alpha = 0f
 
         binding.flashButton.background = null
         binding.flashButton.setImageDrawable(null)
@@ -1514,6 +1530,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.focusButton.setImageDrawable(null)
         binding.focusButton.alpha = 0f
 
+        binding.zoomButton.background = null
+        binding.zoomButton.setImageDrawable(null)
+        binding.zoomButton.alpha = 0f
+
         binding.snapshotButton.background = null
         binding.snapshotButton.setImageDrawable(null)
         binding.snapshotButton.alpha = 0f
@@ -1521,6 +1541,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.muteButton.background = null
         binding.muteButton.setImageDrawable(null)
         binding.muteButton.alpha = 0f
+
+        binding.bluetoothButton.background = null
+        binding.bluetoothButton.setImageDrawable(null)
+        binding.bluetoothButton.alpha = 0f
 
         binding.liveButton.background = null
         binding.liveButton.alpha = 0f
@@ -1547,6 +1571,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.blackScreenButton.setImageResource(R.drawable.ic_light)
         binding.blackScreenButton.alpha = 1.0f
 
+        binding.cameraSettingButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.cameraSettingButton.setImageResource(R.drawable.ic_camera_set)
+        binding.cameraSettingButton.alpha = 1.0f
+
         binding.flashButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         updateFlashIcon()
         binding.flashButton.alpha = 1.0f
@@ -1567,6 +1595,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         updateFocusButton()
         binding.focusButton.alpha = 1.0f
 
+        binding.zoomButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.zoomButton.setImageResource(R.drawable.ic_zoom)
+        binding.zoomButton.alpha = 1.0f
+
         binding.snapshotButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.snapshotButton.setImageResource(R.drawable.ic_camera)
         binding.snapshotButton.alpha = 1.0f
@@ -1574,6 +1606,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.muteButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         updateMuteIcon()
         binding.muteButton.alpha = 1.0f
+
+        binding.bluetoothButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        updateBluetoothIcon(viewModel.bluetoothEnabled.value ?: false)
+        binding.bluetoothButton.alpha = 1.0f
 
         binding.liveButton.background = ContextCompat.getDrawable(this, R.drawable.ic_live_button_selector)
         binding.liveButton.alpha = 1.0f
@@ -1639,7 +1675,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             MainViewModel.FocusMode.CONTINUOUS -> R.drawable.ic_focus_continuous
             MainViewModel.FocusMode.AUTO -> R.drawable.ic_focus_auto
             MainViewModel.FocusMode.MACRO -> R.drawable.ic_focus_macro
-            else -> R.drawable.ic_focus_continuous
+            else -> R.drawable.ic_focus_auto
         }
         binding.focusButton.setImageResource(icon)
     }
