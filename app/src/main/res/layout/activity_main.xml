@@ -133,26 +133,6 @@
             android:contentDescription="@string/menu_button_desc"
             android:layout_marginBottom="4dp" />
 
-        <!-- 變焦按鈕 -->
-        <ImageButton
-            android:id="@+id/zoomButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:background="@drawable/control_button_bg"
-            android:src="@drawable/ic_zoom"
-            android:contentDescription="變焦"
-            android:layout_marginBottom="4dp" />
-
-        <!-- 藍牙開關按鈕 -->
-        <ImageButton
-            android:id="@+id/bluetoothButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:background="@drawable/control_button_bg"
-            android:src="@drawable/ic_bluetooth_off"
-            android:contentDescription="藍牙麥克風開關"
-            android:layout_marginBottom="4dp" />
-
         <!-- 聊天開關按鈕 -->
         <ImageButton
             android:id="@+id/chatButton"
@@ -314,6 +294,69 @@
 
     <!-- 右下角相機控制按鈕群 -->
     <LinearLayout
+        android:id="@+id/hiddenCameraControls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="4dp"
+        android:elevation="10dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/cameraControls"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 切換鏡頭按鈕 -->
+        <ImageButton
+            android:id="@+id/switchCameraButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_switch_camera"
+            android:contentDescription="@string/switch_camera_desc" />
+
+        <!-- 白平衡按鈕 -->
+        <ImageButton
+            android:id="@+id/whiteBalanceButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="@string/white_balance_desc"
+            android:src="@drawable/ic_white_balance" />
+
+        <!-- 曝光補償按鈕 -->
+        <ImageButton
+            android:id="@+id/exposureButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="@string/exposure_desc"
+            android:src="@drawable/ic_exposure" />
+
+        <!-- 對焦模式按鈕 -->
+        <ImageButton
+            android:id="@+id/focusButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="@string/focus_desc"
+            android:src="@drawable/ic_focus_auto" />
+
+        <!-- 變焦按鈕 -->
+        <ImageButton
+            android:id="@+id/zoomButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_zoom"
+            android:contentDescription="變焦" />
+
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/cameraControls"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -387,6 +430,16 @@
             android:contentDescription="@string/mute_desc"
             android:src="@drawable/ic_mute_off" />
 
+        <!-- 藍牙開關按鈕 -->
+        <ImageButton
+            android:id="@+id/bluetoothButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_bluetooth_off"
+            android:contentDescription="藍牙麥克風開關" />
+
         <!-- 閃光燈按鈕 -->
         <ImageButton
             android:id="@+id/flashButton"
@@ -397,45 +450,15 @@
             android:contentDescription="@string/flash_desc"
             android:src="@drawable/ic_flash_auto" />
 
-        <!-- 切換鏡頭按鈕 -->
+        <!-- 相機設定按鈕 (展開/收合) -->
         <ImageButton
-            android:id="@+id/switchCameraButton"
+            android:id="@+id/cameraSettingButton"
             android:layout_width="45dp"
             android:layout_height="45dp"
             android:layout_marginStart="4dp"
             android:background="@drawable/control_button_bg"
-            android:src="@drawable/ic_switch_camera"
-            android:contentDescription="@string/switch_camera_desc" />
-
-        <!-- 白平衡按鈕 -->
-        <ImageButton
-            android:id="@+id/whiteBalanceButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/control_button_bg"
-            android:contentDescription="@string/white_balance_desc"
-            android:src="@drawable/ic_white_balance" />
-
-        <!-- 曝光補償按鈕 -->
-        <ImageButton
-            android:id="@+id/exposureButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/control_button_bg"
-            android:contentDescription="@string/exposure_desc"
-            android:src="@drawable/ic_exposure" />
-
-        <!-- 對焦模式按鈕 -->
-        <ImageButton
-            android:id="@+id/focusButton"
-            android:layout_width="45dp"
-            android:layout_height="45dp"
-            android:layout_marginStart="4dp"
-            android:background="@drawable/control_button_bg"
-            android:contentDescription="@string/focus_desc"
-            android:src="@drawable/ic_focus" />
+            android:contentDescription="相機設定"
+            android:src="@drawable/ic_camera_set" />
 
         <!-- 黑色畫面按鈕 -->
         <ImageButton
