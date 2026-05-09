@@ -1,5 +1,6 @@
+![Live-Streaming-Camera](pics/Logo1.jpg)
 Live Streaming Camera
-![Live-Streaming-Camera](pics/Logo.jpg)
+
 一個使用 [StreamPack boilerplate](https://github.com/ThibaultBee/StreamPack-boilerplate) 作底層製作的 Android/Twitch 直播程式。
 
 
