@@ -28,7 +28,7 @@ Live Streaming Camera
 
 
 ## 按鍵說明
-![Live-Streaming-Camera](pics/Screenshot_5.jpg)
+![Live-Streaming-Camera](pics/Screenshot_6.jpg)
 
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布最新 .apk 檔案。
