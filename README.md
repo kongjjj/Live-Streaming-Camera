@@ -20,8 +20,8 @@ Live Streaming Camera
 - ✔️ 直播時可分別錄影影片儲存到手機記憶體內。
 - ✔️ 拍攝照片。
   
-![Live-Streaming-Camera](pics/Screenshot_3.jpg)
-![Live-Streaming-Camera](pics/Screenshot_4.jpg)
+![Live-Streaming-Camera](pics/Screenshot_1.jpg)
+![Live-Streaming-Camera](pics/Screenshot_2.jpg)
 ## 更多可能加入功能
 
 - 🔜 Overlay
