@@ -52,5 +52,7 @@ fun getBadgeImageRes(name: String): Int = when (name) {
     "ditto" -> R.drawable.ic_badge_ditto
     "bingbonglove" -> R.drawable.ic_badge_bingbonglove
     "baby-chick-chat-badge" -> R.drawable.ic_badge_baby_chick_chat_badge
+    "went-outside" -> R.drawable.ic_badge_went_outside
+    "default-creator-campaign-reward" -> R.drawable.ic_badge_creator_reward
     else          -> 0
 }
