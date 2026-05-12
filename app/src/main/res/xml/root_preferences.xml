@@ -282,9 +282,9 @@
 
         <SwitchPreference
             app:defaultValue="false"
-            app:key="show_stats_overlay"
-            app:title="SRT,RTMP 顯示串流統計"
-            app:summary="在畫面左上角顯示即時位元率、RTT 等資訊" />
+            app:key="show_upload_speed_overlay"
+            app:title="顯示上傳速度"
+            app:summary="即時顯示網路的上傳速率 (kb/s)" />
 
         <SwitchPreference
             app:defaultValue="false"

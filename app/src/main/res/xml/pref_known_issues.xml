@@ -3,6 +3,13 @@
     <PreferenceCategory android:title="版本更新 Ver.2.52">
         <Preference
             android:selectable="false"
+            android:title="將bug了的SRT,RTMP位元率，改變成只顯示上傳速度放在畫面右邊。"
+            android:summary=" " />
+
+    </PreferenceCategory>
+    <PreferenceCategory android:title="版本更新 Ver.2.52">
+        <Preference
+            android:selectable="false"
             android:title="改變了按鈕怖局。"
             android:summary=" " />
 
