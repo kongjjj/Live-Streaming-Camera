@@ -52,6 +52,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import io.github.thibaultbee.streampack.core.utils.extensions.isClosedException
+import android.net.TrafficStats
+import android.os.Process
 import io.github.thibaultbee.srtdroid.core.models.Stats
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -60,6 +62,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 
 data class StreamStats(
     val bitrateKbps: Int = 0,
+    val uploadSpeedKbps: Int = 0,
     val maxBitrateKbps: Int = 0,
     val rttMs: Int? = null,
     val lossPercent: Float? = null,
@@ -72,7 +75,7 @@ class MainViewModel(
     application: Application,
     private val rotationRepository: RotationRepository,
     val streamer: DualStreamer
-) : AndroidViewModel(application) {
+) : AndroidViewModel(application), android.content.SharedPreferences.OnSharedPreferenceChangeListener {
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultDispatcher = Dispatchers.Default
 
@@ -119,6 +122,8 @@ class MainViewModel(
     private val _streamStats = MutableLiveData<StreamStats?>()
     val streamStats: LiveData<StreamStats?> = _streamStats
     private var statsJob: Job? = null
+    private var lastTxBytes: Long = 0
+    private var lastStatsTime: Long = 0
 
     enum class FlashMode { ON, OFF }
     enum class WhiteBalanceMode { AUTO, INCANDESCENT, FLUORESCENT, DAYLIGHT, CLOUDY }
@@ -140,8 +145,22 @@ class MainViewModel(
     val cameraSource: ICameraSource?
         get() = streamer.videoInput?.sourceFlow?.value as? ICameraSource
 
+    override fun onSharedPreferenceChanged(sharedPreferences: android.content.SharedPreferences?, key: String?) {
+        if (key == endpointTypeKey || key == "video_encoder_key") {
+            if (isStreaming) {
+                viewModelScope.launch {
+                    _toastMessage.postValue("設定已更改，重啟推流以套用...")
+                    stopStream()
+                    delay(1000)
+                    startStream()
+                }
+            }
+        }
+    }
+
     init {
         logAllPreferences()
+        prefs.registerOnSharedPreferenceChangeListener(this)
         viewModelScope.launch(defaultDispatcher) {
             rotationRepository.rotationFlow.collect { rotation -> streamer.setTargetRotation(rotation) }
         }
@@ -208,16 +227,44 @@ class MainViewModel(
 
     private fun startStatsCollection() {
         stopStatsCollection()
+        lastTxBytes = TrafficStats.getUidTxBytes(Process.myUid())
+        lastStatsTime = System.currentTimeMillis()
         statsJob = viewModelScope.launch {
             while (isActive) {
                 try {
+                    val currentTime = System.currentTimeMillis()
+                    val currentTxBytes = TrafficStats.getUidTxBytes(Process.myUid())
+                    val timeDiffMs = currentTime - lastStatsTime
+                    
+                    val uploadSpeedKbps = if (timeDiffMs > 0 && currentTxBytes >= lastTxBytes) {
+                        val bytesDiff = currentTxBytes - lastTxBytes
+                        // bytes * 8 (bits) / 1000 (kb) / (ms / 1000) (s) => bits / ms * 0.008
+                        ((bytesDiff * 8.0) / timeDiffMs).toInt()
+                    } else {
+                        0
+                    }
+                    
+                    lastTxBytes = currentTxBytes
+                    lastStatsTime = currentTime
+
                     val endpointType = prefs.getString(endpointTypeKey, "rtmp") ?: "rtmp"
                     val videoEncoder = (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
                     val currentBitrate = (videoEncoder?.bitrate ?: 0) / 1000
+                    
+                    // 從第一個管道的 endpoint 拿 metrics
+                    // 注意：RtmpEndpoint 可能未實作 getMetrics() 並拋出 NotImplementedError
+                    val metrics = if (endpointType == "srt") {
+                        try { streamer.first.endpoint.metrics } catch (_: Exception) { null } catch (_: NotImplementedError) { null }
+                    } else {
+                        null
+                    }
+                    
                     val maxBitrate = if (endpointType == "srt") {
                         val regulatorEnabled = prefs.getBoolean(srtRegulatorEnabledKey, false)
                         if (regulatorEnabled) {
-                            (prefs.getString(srtVideoTargetBitrateKey, "5000") ?: "5000").toInt()
+                            // 若開啟調節器，嘗試從 metrics 獲取當前實際目標碼率 (若有的話)，
+                            // 否則顯示當前編碼器設定的碼率
+                            if (currentBitrate > 0) currentBitrate else (prefs.getString(srtVideoTargetBitrateKey, "5000") ?: "5000").toInt()
                         } else {
                             prefs.getInt(videoBitrateKey, 2000)
                         }
@@ -225,10 +272,7 @@ class MainViewModel(
                         prefs.getInt(videoBitrateKey, 2000)
                     }
 
-                    val stats = if (endpointType == "srt") {
-                        // 從第一個管道的 endpoint 直接拿 metrics
-                        val metrics = streamer.first.endpoint.metrics
-                        // 嘗試偵測是否包含 Stats 相關方法
+                    val stats = if (endpointType == "srt" && metrics != null) {
                         try {
                             // 優先嘗試直接讀取欄位或 getter
                             val cls = metrics.javaClass
@@ -240,6 +284,7 @@ class MainViewModel(
                             val loss = if (pktSent > 0) (pktSndLoss.toFloat() / pktSent) * 100 else 0f
                             StreamStats(
                                 bitrateKbps = currentBitrate,
+                                uploadSpeedKbps = uploadSpeedKbps,
                                 maxBitrateKbps = maxBitrate,
                                 rttMs = msRTT.toInt(),
                                 lossPercent = loss,
@@ -248,10 +293,20 @@ class MainViewModel(
                             )
                         } catch (e: Exception) {
                             Log.e(TAG, "解析 SRT 統計失敗: ${e.message}")
-                            StreamStats(bitrateKbps = currentBitrate, maxBitrateKbps = maxBitrate, endpointType = "srt")
+                            StreamStats(
+                                bitrateKbps = currentBitrate,
+                                uploadSpeedKbps = uploadSpeedKbps,
+                                maxBitrateKbps = maxBitrate,
+                                endpointType = "srt"
+                            )
                         }
                     } else {
-                        StreamStats(bitrateKbps = currentBitrate, maxBitrateKbps = maxBitrate, endpointType = endpointType)
+                        StreamStats(
+                            bitrateKbps = currentBitrate,
+                            uploadSpeedKbps = uploadSpeedKbps,
+                            maxBitrateKbps = maxBitrate,
+                            endpointType = endpointType
+                        )
                     }
 
                     _streamStats.postValue(stats)
@@ -760,6 +815,7 @@ class MainViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        prefs.unregisterOnSharedPreferenceChangeListener(this)
         networkCallback?.let { try { connectivityManager?.unregisterNetworkCallback(it) } catch (_: Exception) { } }
         viewModelScope.launch { streamer.release() }
         bluetoothHelper.stopSco()

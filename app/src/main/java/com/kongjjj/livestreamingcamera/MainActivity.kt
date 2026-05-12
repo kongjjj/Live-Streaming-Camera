@@ -109,6 +109,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private val showStatsKey = "show_stats_overlay"
     private val showBatteryKey = "show_battery_overlay"
     private val showNetworkSignalKey = "show_network_signal_overlay"
+
+    private val showUploadSpeedKey = "show_upload_speed_overlay"
     private val showTiltKey = "show_tilt_overlay"
     private val showAudioLevelKey = "show_audio_level"
     private var isBlackOverlayVisible = false
@@ -301,6 +303,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         setupZoomButton()
         setupRecordButton()
 
+        viewModel.streamStats.observe(this) { stats ->
+            stats?.let {
+                binding.uploadSpeedOverlay.updateStats(it.maxBitrateKbps, it.uploadSpeedKbps)
+            }
+        }
+
         viewModel.reconnectingMessage.observe(this) { message ->
             message?.let { toast(it) }
         }
@@ -336,13 +344,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             )
         }
         ttsManager = TTSManager(this)
-        updateStatsOverlayVisibility()
         updateChatFontSize()
         updateStatusText()
         updateOverlayVisibility()  // 根據偏好設定初始可見性
-        applyStatusBarVisibility()
-        // 請求訊號強度所需的權限
-        requestSignalPermissions()
     }
     private fun applyStatusBarVisibility() {
         // 黑屏模式下狀態欄已被隱藏，不需再改變
@@ -668,8 +672,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 }
             }
             endpointTypeKey -> updateStatusText()
-            showStatsKey -> updateStatsOverlayVisibility()
+            showStatsKey -> updateOverlayVisibility()
             showTiltKey -> updateOverlayVisibility()
+            showUploadSpeedKey -> updateOverlayVisibility()
             showBatteryKey, showNetworkSignalKey -> updateOverlayVisibility()
             "chat_font_size" -> updateChatFontSize()
             chatShadowEnabledKey -> updateChatShadow()
@@ -715,11 +720,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         chatAdapter.setFontSize(fontSize)
     }
 
-    private fun updateStatsOverlayVisibility() {
-        val enabled = prefs.getBoolean(showStatsKey, false)
-        binding.streamStatsOverlay.visibility = if (enabled) View.VISIBLE else View.GONE
-    }
-
     /**
      * 根據偏好設定更新電池與網路訊號 Overlay 的可見性（需考慮黑屏模式）
      */
@@ -730,11 +730,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val showShake = prefs.getBoolean(showShakeLevelKey, false)
         val showAudio = prefs.getBoolean(showAudioLevelKey, true)
         val showTilt = prefs.getBoolean(showTiltKey, false)
+
+        val showUploadSpeed = prefs.getBoolean(showUploadSpeedKey, false)
         binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
         binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
         binding.shakeLevelOverlay.visibility = if (showShake) View.VISIBLE else View.GONE
         binding.audioLevelOverlay.visibility = if (showAudio) View.VISIBLE else View.GONE
         binding.tiltOverlay.visibility = if (showTilt) View.VISIBLE else View.GONE
+        binding.uploadSpeedOverlay.visibility = if (showUploadSpeed) View.VISIBLE else View.GONE
     }
 
     private fun setupBluetoothButton() {
@@ -823,10 +826,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
             binding.audioLevelOverlay.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 this.topMargin = topMargin + 2.dpToPx()
-            }
-
-            binding.streamStatsOverlay.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                this.topMargin = topMargin
             }
 
             binding.cameraControls.updateLayoutParams<ViewGroup.MarginLayoutParams> {
@@ -1493,6 +1492,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun hideAllButtons() {
         // 隱藏右上角按鈕容器
+        binding.uploadSpeedOverlay.visibility = View.GONE
         binding.tiltOverlay.visibility = View.GONE
         binding.topRightButtonContainer.visibility = View.GONE
         binding.batteryOverlay.visibility = View.GONE
@@ -1558,7 +1558,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         binding.statusTextView.visibility = View.INVISIBLE
         binding.audioLevelOverlay.visibility = View.GONE
-        binding.streamStatsOverlay.visibility = View.GONE
     }
 
     private fun restoreAllButtons() {
@@ -1631,7 +1630,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         // 網路訊號與電池 Overlay 將由 updateOverlayVisibility 統一處理
         binding.statusTextView.visibility = View.VISIBLE
         binding.audioLevelOverlay.visibility = View.VISIBLE
-        updateStatsOverlayVisibility()
+        // 監聽 ViewModel 的數據更新，同步給 Overlay
         // 恢復 Overlay 可見性（根據偏好設定）
         updateOverlayVisibility()
         applyStatusBarVisibility()
