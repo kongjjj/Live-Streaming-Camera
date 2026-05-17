@@ -31,6 +31,7 @@ import com.kongjjj.livestreamingcamera.bitrate.RegulatorMode
 import com.kongjjj.livestreamingcamera.bluetooth.BluetoothAudioHelper
 import com.kongjjj.livestreamingcamera.bluetooth.BluetoothAudioSourceFactory
 import com.kongjjj.livestreamingcamera.data.rotation.RotationRepository
+import com.kongjjj.livestreamingcamera.utils.EffectSurfaceProcessor
 import io.github.thibaultbee.streampack.core.configuration.BitrateRegulatorConfig
 import io.github.thibaultbee.streampack.core.elements.sources.video.camera.ICameraSource
 import io.github.thibaultbee.streampack.core.interfaces.setCameraId
@@ -76,6 +77,10 @@ class MainViewModel(
     private val rotationRepository: RotationRepository,
     val streamer: DualStreamer
 ) : AndroidViewModel(application), android.content.SharedPreferences.OnSharedPreferenceChangeListener {
+    
+    // 取得自定義處理器以更新特效
+    private val effectProcessor: EffectSurfaceProcessor?
+        get() = streamer.videoInput?.processor as? EffectSurfaceProcessor
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultDispatcher = Dispatchers.Default
 
@@ -102,6 +107,7 @@ class MainViewModel(
 
     private var isStreamRetrying = false
     private var isRecordingActionPending = false
+    private var currentRotation: Int = 0
     private var streamRetryJob: Job? = null
     private var userStoppedManually = false
     private val _reconnectingMessage = MutableLiveData<String?>()
@@ -140,6 +146,17 @@ class MainViewModel(
     private val _isMuted = MutableLiveData(false)
     val isMuted: LiveData<Boolean> = _isMuted
 
+    private val _isGrayscale = MutableLiveData(false)
+    val isGrayscale: LiveData<Boolean> = _isGrayscale
+    private val _isBeauty = MutableLiveData(false)
+    val isBeauty: LiveData<Boolean> = _isBeauty
+    private val _isBlur = MutableLiveData(false)
+    val isBlur: LiveData<Boolean> = _isBlur
+    private val _isMosaic = MutableLiveData(false)
+    val isMosaic: LiveData<Boolean> = _isMosaic
+    private val _isSepia = MutableLiveData(false)
+    val isSepia: LiveData<Boolean> = _isSepia
+
     @Suppress("unused") private val audioManager = application.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     val cameraSource: ICameraSource?
@@ -162,7 +179,10 @@ class MainViewModel(
         logAllPreferences()
         prefs.registerOnSharedPreferenceChangeListener(this)
         viewModelScope.launch(defaultDispatcher) {
-            rotationRepository.rotationFlow.collect { rotation -> streamer.setTargetRotation(rotation) }
+            rotationRepository.rotationFlow.collect { rotation -> 
+                currentRotation = rotation
+                streamer.setTargetRotation(rotation) 
+            }
         }
         if (!prefs.contains("video_encoder_key")) {
             prefs.edit().putString("video_encoder_key", "h264").apply()
@@ -334,6 +354,17 @@ class MainViewModel(
         }
     }
 
+    private fun getRecordEncoderInputSurface(): Surface? {
+        return try {
+            val encoder = (streamer.second as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
+            val getSurfaceMethod = encoder?.let { it::class.java }?.methods?.find { it.name == "getInputSurface" || it.name == "inputSurface" }
+            getSurfaceMethod?.invoke(encoder) as? Surface
+        } catch (e: Exception) {
+            Log.e(TAG, "獲取錄影編碼器 Surface 失敗", e)
+            null
+        }
+    }
+
     private fun logAllPreferences() {
         val allPrefs = prefs.all
         Log.d(TAG, "===== 目前偏好設定 =====")
@@ -348,11 +379,21 @@ class MainViewModel(
             override fun onLost(network: Network) {
                 wasStreamingBeforeNetworkLost = isStreamingLiveData.value == true
                 Log.d(TAG, "網路中斷")
+                if (wasStreamingBeforeNetworkLost) {
+                    _reconnectingMessage.postValue("失去連線，等待網路恢復...")
+                }
             }
 
             override fun onAvailable(network: Network) {
-                Log.d(TAG, "網路可用: ${if (connectivityManager?.activeNetwork?.let { connectivityManager?.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) } == true) "WiFi" else "行動數據"}")
-                if (wasStreamingBeforeNetworkLost) {
+                val capabilities = connectivityManager?.getNetworkCapabilities(network)
+                val type = if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) "WiFi" else "行動數據"
+                Log.d(TAG, "網路可用: $type")
+                
+                if (wasStreamingBeforeNetworkLost || isStreamRetrying) {
+                    Log.d(TAG, "偵測到網路切換，立即觸發重連")
+                    // 網路恢復後立即重連，取消舊的 retry job 以避免等待
+                    streamRetryJob?.cancel()
+                    isStreamRetrying = false 
                     startStreamRetry()
                 }
                 wasStreamingBeforeNetworkLost = false
@@ -371,22 +412,39 @@ class MainViewModel(
         isStreamRetrying = true
         streamRetryJob = viewModelScope.launch {
             _isTryingConnectionLiveData.postValue(true)
+            var retryCount = 0
+            val maxDelay = 30000L
+
             while (isStreamRetrying && !userStoppedManually) {
-                _reconnectingMessage.postValue("網路切換，重新連線中...")
+                _reconnectingMessage.postValue("網路切換，嘗試連線中...")
                 try {
-                    if (streamer.first.isStreamingFlow.value) streamer.first.stopStream()
+                    Log.d(TAG, "正在重連 (嘗試 $retryCount)...")
+                    if (streamer.first.isStreamingFlow.value) {
+                        try { streamer.first.stopStream() } catch (_: Exception) {}
+                    }
                     streamer.first.close()
-                    delay(500)
+                    
+                    delay(1000) // 給予 OS 更多時間釋放資源並穩定網路路徑
+                    
                     applyCurrentConfig()
-                    val success = startStreamInternal(shouldSuppressErrors = true)
+                    
+                    val success = withTimeoutOrNull(10000L) {
+                        startStreamInternal(shouldSuppressErrors = true)
+                    } ?: false
+
                     if (success) {
+                        Log.i(TAG, "重連成功")
                         _reconnectingMessage.postValue(null)
                         break
                     } else {
-                        _reconnectingMessage.postValue("連線失敗，5秒後重試...")
-                        delay(5000)
+                        retryCount++
+                        val delayTime = minOf(2000L * (1 shl (minOf(retryCount - 1, 5))), maxDelay)
+                        _reconnectingMessage.postValue("連線失敗，${delayTime / 1000}秒後重試...")
+                        Log.w(TAG, "重連失敗，等待 $delayTime ms")
+                        delay(delayTime)
                     }
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    Log.e(TAG, "Retry cycle error", e)
                     delay(5000)
                 }
             }
@@ -695,7 +753,64 @@ class MainViewModel(
         return newMute
     }
 
+    fun toggleGrayscale(): Boolean {
+        val current = _isGrayscale.value ?: false
+        val newValue = !current
+        _isGrayscale.value = newValue
+        updateProcessorEffects()
+        return newValue
+    }
+
+    fun toggleBeauty(): Boolean {
+        val current = _isBeauty.value ?: false
+        val newValue = !current
+        _isBeauty.value = newValue
+        updateProcessorEffects()
+        return newValue
+    }
+
+    fun toggleBlur(): Boolean {
+        val current = _isBlur.value ?: false
+        val newValue = !current
+        _isBlur.value = newValue
+        if (newValue) {
+            _isMosaic.value = false
+        }
+        updateProcessorEffects()
+        return newValue
+    }
+
+    fun toggleMosaic(): Boolean {
+        val current = _isMosaic.value ?: false
+        val newValue = !current
+        _isMosaic.value = newValue
+        if (newValue) {
+            _isBlur.value = false
+        }
+        updateProcessorEffects()
+        return newValue
+    }
+
+    fun toggleSepia(): Boolean {
+        val current = _isSepia.value ?: false
+        val newValue = !current
+        _isSepia.value = newValue
+        updateProcessorEffects()
+        return newValue
+    }
+
+    private fun updateProcessorEffects() {
+        effectProcessor?.updateEffects(
+            _isGrayscale.value ?: false,
+            _isBeauty.value ?: false,
+            _isBlur.value ?: false,
+            _isMosaic.value ?: false,
+            _isSepia.value ?: false
+        )
+    }
+
     fun toggleRecording() {
+        Log.d(TAG, "toggleRecording: isRecording=${streamer.second.isStreamingFlow.value}, isPending=$isRecordingActionPending")
         if (isRecordingActionPending) return
         isRecordingActionPending = true
         
@@ -703,6 +818,7 @@ class MainViewModel(
             try {
                 if (streamer.second.isStreamingFlow.value) {
                     try {
+                        Log.d(TAG, "正在停止錄影...")
                         streamer.second.stopStream()
                         streamer.second.close()
                         _toastMessage.postValue("錄影已停止")
@@ -714,16 +830,15 @@ class MainViewModel(
                     val storageUriString = prefs.getString(getApplication<Application>().getString(R.string.file_name_key), null)
                     if (storageUriString == null) {
                         _toastMessage.postValue("請先在設定中選擇儲存位置")
-                        isRecordingActionPending = false
                         return@launch
                     }
 
                     try {
+                        Log.d(TAG, "正在開始錄影...")
                         val storageUri = Uri.parse(storageUriString)
                         val directory = DocumentFile.fromTreeUri(getApplication(), storageUri)
                         if (directory == null || !directory.canWrite()) {
                             _toastMessage.postValue("儲存位置無法寫入")
-                            isRecordingActionPending = false
                             return@launch
                         }
 
@@ -732,7 +847,6 @@ class MainViewModel(
                         val file = directory.createFile("video/mp4", fileName)
                         if (file == null) {
                             _toastMessage.postValue("無法建立錄影檔案")
-                            isRecordingActionPending = false
                             return@launch
                         }
 
@@ -745,6 +859,21 @@ class MainViewModel(
                         applyCurrentConfig()
 
                         streamer.second.startStream(UriMediaDescriptor(getApplication(), file.uri))
+                        Log.d(TAG, "錄影管道已啟動: $fileName")
+                        
+                        // 啟動後輪詢並禁用錄影 Pipe 的特效 (影相錄影不使用特效)
+                        viewModelScope.launch {
+                            repeat(10) { i ->
+                                delay(500)
+                                getRecordEncoderInputSurface()?.let { surface ->
+                                    effectProcessor?.setSurfaceEffectEnabled(surface, false)
+                                    Log.d(TAG, "已為錄影 Surface 禁用特效 (嘗試 $i): $surface")
+                                    return@launch
+                                }
+                            }
+                            Log.w(TAG, "未能獲取錄影 Surface，無法禁用特效")
+                        }
+
                         _toastMessage.postValue("錄影開始: $fileName")
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to start recording", e)
@@ -752,63 +881,10 @@ class MainViewModel(
                     }
                 }
             } finally {
-                // 延遲一段時間再允許下一次操作，避免快速重複點擊導致狀態混亂
-                delay(1000)
+                // 減少延遲，讓按鈕更靈敏，但仍防止連擊
+                delay(500)
                 isRecordingActionPending = false
-            }
-        }
-    }
-
-    fun takePhoto() {
-        viewModelScope.launch {
-            if (streamer.second.isStreamingFlow.value) {
-                _toastMessage.postValue("錄影中，無法拍照")
-                return@launch
-            }
-
-            // 拍照前確保套用最新配置
-            applyCurrentConfig()
-
-            val storageUriString = prefs.getString(getApplication<Application>().getString(R.string.file_name_key), null)
-            if (storageUriString == null) {
-                _toastMessage.postValue("請先在設定中選擇儲存位置")
-                return@launch
-            }
-
-            try {
-                val storageUri = Uri.parse(storageUriString)
-                val directory = DocumentFile.fromTreeUri(getApplication(), storageUri)
-                if (directory == null || !directory.canWrite()) {
-                    _toastMessage.postValue("儲存位置無法寫入")
-                    return@launch
-                }
-
-                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                val fileName = "IMG_$timestamp.jpg"
-                val file = directory.createFile("image/jpeg", fileName)
-                if (file == null) {
-                    _toastMessage.postValue("無法建立照片檔案")
-                    return@launch
-                }
-
-                getApplication<Application>().contentResolver.openOutputStream(file.uri)?.use { outputStream ->
-                    streamer.videoInput?.let { videoInput ->
-                        // 這裡可以根據需要調整旋轉角度，目前設為 0
-                        videoInput.takeJpegSnapshot(
-                            outputStream,
-                            quality = 100,
-                            rotationDegrees = 0
-                        )
-                        _toastMessage.postValue("照片已儲存: $fileName")
-                    } ?: run {
-                        _toastMessage.postValue("截圖失敗：影像輸入未就緒")
-                    }
-                } ?: run {
-                    _toastMessage.postValue("無法打開檔案輸出流")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to take photo", e)
-                _toastMessage.postValue("拍照失敗: ${e.message}")
+                Log.d(TAG, "toggleRecording: action pending cleared")
             }
         }
     }

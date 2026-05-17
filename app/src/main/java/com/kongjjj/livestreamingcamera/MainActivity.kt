@@ -338,11 +338,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         viewModel.toastMessage.observe(this) { message ->
             message?.let { toast(it) }
         }
-        viewModel.isRecordingLiveData.observe(this) { isRecording ->
-            binding.recordButton.setImageResource(
-                if (isRecording) R.drawable.ic_recorder_stop else R.drawable.ic_recorder_start
-            )
-        }
         ttsManager = TTSManager(this)
         updateChatFontSize()
         updateStatusText()
@@ -784,8 +779,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.recordButton.setOnClickListener {
             viewModel.toggleRecording()
         }
-        binding.snapshotButton.setOnClickListener {
-            viewModel.takePhoto()
+        viewModel.isRecordingLiveData.observe(this) { isRecording ->
+            binding.recordButton.setImageResource(
+                if (isRecording) R.drawable.ic_recorder_stop else R.drawable.ic_recorder_start
+            )
         }
     }
 
@@ -1419,6 +1416,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
         }
 
+        binding.effectsMenuButton.setOnClickListener {
+            binding.hiddenEffectControls.visibility = if (binding.hiddenEffectControls.visibility == View.VISIBLE) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
+        }
+
         binding.flashButton.setOnClickListener {
             val newMode = viewModel.toggleFlash()
             updateFlashIcon()
@@ -1471,6 +1476,47 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             toast("麥克風: ${if (newMute) "靜音" else "通話"}")
         }
         viewModel.isMuted.observe(this) { updateMuteIcon() }
+
+        // --- 特效按鈕 ---
+        binding.grayscaleButton.setOnClickListener {
+            val isEnabled = viewModel.toggleGrayscale()
+            toast("黑白濾鏡: ${if (isEnabled) "開啟" else "關閉"}")
+        }
+        viewModel.isGrayscale.observe(this) { isEnabled ->
+            binding.grayscaleButton.alpha = if (isEnabled) 1.0f else 0.5f
+        }
+
+        binding.beautyButton.setOnClickListener {
+            val isEnabled = viewModel.toggleBeauty()
+            toast("美顏: ${if (isEnabled) "開啟" else "關閉"}")
+        }
+        viewModel.isBeauty.observe(this) { isEnabled ->
+            binding.beautyButton.alpha = if (isEnabled) 1.0f else 0.5f
+        }
+
+        binding.blurButton.setOnClickListener {
+            val isEnabled = viewModel.toggleBlur()
+            toast("模糊: ${if (isEnabled) "開啟" else "關閉"}")
+        }
+        viewModel.isBlur.observe(this) { isEnabled ->
+            binding.blurButton.alpha = if (isEnabled) 1.0f else 0.5f
+        }
+
+        binding.mosaicButton.setOnClickListener {
+            val isEnabled = viewModel.toggleMosaic()
+            toast("馬賽克: ${if (isEnabled) "開啟" else "關閉"}")
+        }
+        viewModel.isMosaic.observe(this) { isEnabled ->
+            binding.mosaicButton.alpha = if (isEnabled) 1.0f else 0.5f
+        }
+
+        binding.sepiaButton.setOnClickListener {
+            val isEnabled = viewModel.toggleSepia()
+            toast("復古: ${if (isEnabled) "開啟" else "關閉"}")
+        }
+        viewModel.isSepia.observe(this) { isEnabled ->
+            binding.sepiaButton.alpha = if (isEnabled) 1.0f else 0.5f
+        }
     }
 
     private fun toggleBlackOverlay() {
@@ -1498,7 +1544,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.batteryOverlay.visibility = View.GONE
         binding.shakeLevelOverlay.visibility = View.GONE
 
-        // 隱藏隱藏式相機控制列
+        // 隱藏隱藏式選單容器
+        binding.hiddenMenusContainer.visibility = View.GONE
+        binding.hiddenEffectControls.visibility = View.GONE
         binding.hiddenCameraControls.visibility = View.GONE
 
         // 隱藏右下角所有控制按鈕（包含直播按鈕、切換鏡頭等）
@@ -1510,9 +1558,33 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.cameraSettingButton.setImageDrawable(null)
         binding.cameraSettingButton.alpha = 0f
 
+        binding.effectsMenuButton.background = null
+        binding.effectsMenuButton.setImageDrawable(null)
+        binding.effectsMenuButton.alpha = 0f
+
         binding.flashButton.background = null
         binding.flashButton.setImageDrawable(null)
         binding.flashButton.alpha = 0f
+
+        binding.sepiaButton.background = null
+        binding.sepiaButton.setImageDrawable(null)
+        binding.sepiaButton.alpha = 0f
+
+        binding.mosaicButton.background = null
+        binding.mosaicButton.setImageDrawable(null)
+        binding.mosaicButton.alpha = 0f
+
+        binding.blurButton.background = null
+        binding.blurButton.setImageDrawable(null)
+        binding.blurButton.alpha = 0f
+
+        binding.beautyButton.background = null
+        binding.beautyButton.setImageDrawable(null)
+        binding.beautyButton.alpha = 0f
+
+        binding.grayscaleButton.background = null
+        binding.grayscaleButton.setImageDrawable(null)
+        binding.grayscaleButton.alpha = 0f
 
         binding.switchCameraButton.background = null
         binding.switchCameraButton.setImageDrawable(null)
@@ -1533,10 +1605,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.zoomButton.background = null
         binding.zoomButton.setImageDrawable(null)
         binding.zoomButton.alpha = 0f
-
-        binding.snapshotButton.background = null
-        binding.snapshotButton.setImageDrawable(null)
-        binding.snapshotButton.alpha = 0f
 
         binding.muteButton.background = null
         binding.muteButton.setImageDrawable(null)
@@ -1563,8 +1631,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun restoreAllButtons() {
         // 顯示右上角按鈕容器
         binding.topRightButtonContainer.visibility = View.VISIBLE
-        // 電池 Overlay 將由 updateOverlayVisibility 根據偏好設定決定，此處不直接設為 VISIBLE
-        // 網路訊號 Overlay 同理
+        
+        // 顯示選單容器 (具體選單由 visibility 狀態決定)
+        binding.hiddenMenusContainer.visibility = View.VISIBLE
+
         // 恢復右下角所有控制按鈕
         binding.blackScreenButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.blackScreenButton.setImageResource(R.drawable.ic_light)
@@ -1574,9 +1644,33 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.cameraSettingButton.setImageResource(R.drawable.ic_camera_set)
         binding.cameraSettingButton.alpha = 1.0f
 
+        binding.effectsMenuButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.effectsMenuButton.setImageResource(R.drawable.ic_auto_awesome)
+        binding.effectsMenuButton.alpha = 1.0f
+
+        binding.sepiaButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.sepiaButton.setImageResource(R.drawable.ic_sepia)
+        binding.sepiaButton.alpha = if (viewModel.isSepia.value == true) 1.0f else 0.5f
+
         binding.flashButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         updateFlashIcon()
         binding.flashButton.alpha = 1.0f
+
+        binding.mosaicButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.mosaicButton.setImageResource(R.drawable.ic_mosaic)
+        binding.mosaicButton.alpha = if (viewModel.isMosaic.value == true) 1.0f else 0.5f
+
+        binding.blurButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.blurButton.setImageResource(R.drawable.ic_blur)
+        binding.blurButton.alpha = if (viewModel.isBlur.value == true) 1.0f else 0.5f
+
+        binding.beautyButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.beautyButton.setImageResource(R.drawable.ic_face_retouching)
+        binding.beautyButton.alpha = if (viewModel.isBeauty.value == true) 1.0f else 0.5f
+
+        binding.grayscaleButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.grayscaleButton.setImageResource(R.drawable.ic_filter_b_and_w)
+        binding.grayscaleButton.alpha = if (viewModel.isGrayscale.value == true) 1.0f else 0.5f
 
         binding.switchCameraButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.switchCameraButton.setImageResource(R.drawable.ic_switch_camera)
@@ -1597,10 +1691,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.zoomButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.zoomButton.setImageResource(R.drawable.ic_zoom)
         binding.zoomButton.alpha = 1.0f
-
-        binding.snapshotButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
-        binding.snapshotButton.setImageResource(R.drawable.ic_camera)
-        binding.snapshotButton.alpha = 1.0f
 
         binding.muteButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         updateMuteIcon()
