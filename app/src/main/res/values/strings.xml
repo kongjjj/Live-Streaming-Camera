@@ -126,4 +126,10 @@
     <string name="uptime_default">00:00:00</string>
     <string name="video_encoder_title">影像編碼器</string>
     <string name="snapshot">拍照</string>
+    <string name="grayscale_desc">黑白濾鏡</string>
+    <string name="beauty_desc">美顏</string>
+    <string name="blur_desc">模糊</string>
+    <string name="mosaic_desc">馬賽克</string>
+    <string name="sepia_desc">復古</string>
+    <string name="effects_desc">特效</string>
 </resources>
