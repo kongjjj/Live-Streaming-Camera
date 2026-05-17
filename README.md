@@ -19,6 +19,7 @@
 - ✔️ 水平角度顯示，可在設定內開關。
 - ✔️ 直播時可分別錄影影片儲存到手機記憶體內。
 - ✔️ 拍攝照片。
+- ✔️ 暫時加入5種鏡頭特效，不會在預覽中顯示，只有直播內見到。
   
 ![Live-Streaming-Camera](pics/Screenshot_1.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
