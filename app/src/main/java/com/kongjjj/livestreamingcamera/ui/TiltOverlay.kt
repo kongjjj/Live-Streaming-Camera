@@ -1,4 +1,3 @@
-// TiltOverlay.kt
 package com.kongjjj.livestreamingcamera.ui
 
 import android.content.Context
