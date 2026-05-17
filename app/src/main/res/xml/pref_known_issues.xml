@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory android:title="版本更新 Ver.2.52">
+    <PreferenceCategory android:title="版本更新 Ver.2.54">
+        <Preference
+            android:selectable="false"
+            android:title="加入特效功能:馬賽克,復古,模糊,美顏,黑白濾鏡，影相功能有bug暫時disable。"
+            android:summary=" " />
+
+    </PreferenceCategory>
+    <PreferenceCategory android:title="版本更新 Ver.2.53">
         <Preference
             android:selectable="false"
             android:title="將bug了的SRT,RTMP位元率，改變成只顯示上傳速度放在畫面右邊。"
