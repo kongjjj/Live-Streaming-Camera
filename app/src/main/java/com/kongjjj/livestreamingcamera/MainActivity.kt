@@ -44,6 +44,7 @@ import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.kongjjj.livestreamingcamera.databinding.ActivityMainBinding
 import com.kongjjj.livestreamingcamera.models.AudioLevelFlow
+import com.kongjjj.livestreamingcamera.audio.AudioLevel
 import com.kongjjj.livestreamingcamera.ui.NetworkSignalOverlay
 import com.kongjjj.livestreamingcamera.utils.PermissionsManager
 import com.kongjjj.livestreamingcamera.utils.showDialog
@@ -1868,7 +1869,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 audioLevelFlow.audioLevelFlow.collect { audioLevel ->
-                    binding.audioLevelOverlay.updateAudioLevel(audioLevel)
+                    if (viewModel.isMuted.value == true) {
+                        binding.audioLevelOverlay.updateAudioLevel(AudioLevel.SILENT)
+                    } else {
+                        binding.audioLevelOverlay.updateAudioLevel(audioLevel)
+                    }
                 }
             }
         }

@@ -33,6 +33,7 @@ import com.kongjjj.livestreamingcamera.bluetooth.BluetoothAudioSourceFactory
 import com.kongjjj.livestreamingcamera.data.rotation.RotationRepository
 import com.kongjjj.livestreamingcamera.utils.EffectSurfaceProcessor
 import io.github.thibaultbee.streampack.core.configuration.BitrateRegulatorConfig
+import io.github.thibaultbee.streampack.core.elements.sources.audio.IAudioSourceInternal
 import io.github.thibaultbee.streampack.core.elements.sources.video.camera.ICameraSource
 import io.github.thibaultbee.streampack.core.interfaces.setCameraId
 import io.github.thibaultbee.streampack.core.interfaces.startStream
@@ -84,6 +85,9 @@ class MainViewModel(
     private val prefs = PreferenceManager.getDefaultSharedPreferences(application)
     private val defaultDispatcher = Dispatchers.Default
 
+    private val isMutedProvider = { _isMutedFlow.value }
+    private val _isMutedFlow = MutableStateFlow(false)
+    val isMuted: LiveData<Boolean> = _isMutedFlow.asLiveData()
     internal val endpointTypeKey by lazy { getApplication<Application>().getString(R.string.endpoint_type_key) }
     internal val rtmpUrlKey by lazy { getApplication<Application>().getString(R.string.rtmp_server_url_key) }
 
@@ -143,8 +147,7 @@ class MainViewModel(
     val exposureCompensation: LiveData<Int> = _exposureCompensation
     private val _focusMode = MutableLiveData(FocusMode.AUTO)
     val focusMode: LiveData<FocusMode> = _focusMode
-    private val _isMuted = MutableLiveData(false)
-    val isMuted: LiveData<Boolean> = _isMuted
+
 
     private val _isGrayscale = MutableLiveData(false)
     val isGrayscale: LiveData<Boolean> = _isGrayscale
@@ -158,6 +161,8 @@ class MainViewModel(
     val isSepia: LiveData<Boolean> = _isSepia
 
     @Suppress("unused") private val audioManager = application.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+    private var currentBaseAudioFactory: IAudioSourceInternal.Factory = ConditionalAudioSourceFactory()
 
     val cameraSource: ICameraSource?
         get() = streamer.videoInput?.sourceFlow?.value as? ICameraSource
@@ -203,7 +208,11 @@ class MainViewModel(
 
     fun enableBluetooth(enabled: Boolean) {
         viewModelScope.launch {
-            if (!enabled) { switchToBuiltInMic(); _bluetoothEnabled.postValue(false); return@launch }
+            if (!enabled) {
+                switchToBuiltInMic()
+                _bluetoothEnabled.postValue(false)
+                return@launch
+            }
             val (device, permissionDenied) = bluetoothHelper.detectBluetoothScoDeviceWithStatus()
             if (permissionDenied) {
                 _bluetoothEnabled.postValue(false)
@@ -217,11 +226,13 @@ class MainViewModel(
             }
             if (withContext(Dispatchers.IO) { bluetoothHelper.startScoAndWait(4000) }) {
                 try {
-                    streamer.setAudioSource(BluetoothAudioSourceFactory(device))
+                    applyAudioSource(BluetoothAudioSourceFactory(device))
                     _bluetoothEnabled.postValue(true)
                     _toastMessage.postValue("藍牙麥克風已啟用")
                 } catch (_: Exception) {
-                    bluetoothHelper.stopSco(); _bluetoothEnabled.postValue(false); _toastMessage.postValue("藍牙啟用失敗")
+                    bluetoothHelper.stopSco()
+                    _bluetoothEnabled.postValue(false)
+                    _toastMessage.postValue("藍牙啟用失敗")
                 }
             } else {
                 _bluetoothEnabled.postValue(false)
@@ -239,7 +250,7 @@ class MainViewModel(
     }
     private suspend fun switchToBuiltInMic() {
         bluetoothHelper.stopSco()
-        streamer.setAudioSource(ConditionalAudioSourceFactory())
+        applyAudioSource(ConditionalAudioSourceFactory())
         _toastMessage.postValue("藍牙麥克風已關閉")
     }
 
@@ -456,7 +467,7 @@ class MainViewModel(
     private suspend fun startStreamInternal(shouldSuppressErrors: Boolean = false): Boolean {
         // 啟動前強制重新掛載音訊來源並套用配置，解決 RTMP 間中無聲問題
         try {
-            streamer.setAudioSource(ConditionalAudioSourceFactory())
+            applyAudioSource()
             delay(100) 
             applyCurrentConfig()
         } catch (e: Exception) {
@@ -686,7 +697,15 @@ class MainViewModel(
         lastAppliedFps = fps
     }
 
-    suspend fun setAudioSource() { streamer.setAudioSource(ConditionalAudioSourceFactory()) }
+    suspend fun applyAudioSource(factory: IAudioSourceInternal.Factory = currentBaseAudioFactory) {
+        currentBaseAudioFactory = factory
+        val muteableFactory = MuteableAudioSourceFactory(factory, isMutedProvider)
+        streamer.setAudioSource(muteableFactory)
+    }
+
+    suspend fun setAudioSource() {
+        applyAudioSource()
+    }
     suspend fun setCameraId(cameraId: String) { streamer.setCameraId(cameraId); currentCameraId = cameraId }
 
     suspend fun switchCamera() {
@@ -747,9 +766,8 @@ class MainViewModel(
     }
 
     fun toggleMute(): Boolean {
-        val newMute = !(_isMuted.value ?: false)
-        _isMuted.value = newMute
-        try { streamer.audioInput?.isMuted = newMute } catch (_: Exception) { }
+        val newMute = !_isMutedFlow.value
+        _isMutedFlow.value = newMute
         return newMute
     }
 
