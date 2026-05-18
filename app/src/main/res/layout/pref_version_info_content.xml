@@ -59,7 +59,7 @@
             android:id="@+id/version_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="2.5.4"
+            android:text="2.5.5"
             android:textSize="16sp"
             android:layout_marginEnd="16dp" />
 
@@ -75,7 +75,7 @@
             android:id="@+id/build_value"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="70"
+            android:text="72"
             android:textSize="16sp" />
     </LinearLayout>
 </LinearLayout>
