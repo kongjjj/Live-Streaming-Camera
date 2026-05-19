@@ -25,7 +25,7 @@
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
 ## 更多可能加入功能
 
-- 🔜 Youtube Chat
+- 🔜 Overlay
 
 
 ## 按鍵說明
