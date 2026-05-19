@@ -53,25 +53,7 @@
                 app:title="@string/video_bitrate"
                 app:seekBarIncrement="500"
                 app:useSimpleSummaryProvider="true" />
-
-            <!-- 編碼檔次 (Profile) -->
-            <ListPreference
-                app:defaultValue="baseline"
-                app:entries="@array/video_profile_entries"
-                app:entryValues="@array/video_profile_values"
-                app:key="@string/video_profile_key"
-                app:title="@string/video_profile"
-                app:useSimpleSummaryProvider="true" />
-
-            <!-- 編碼級別 (Level) -->
-            <ListPreference
-                app:defaultValue="3.1"
-                app:entries="@array/video_level_entries"
-                app:entryValues="@array/video_level_values"
-                app:key="@string/video_level_key"
-                app:title="@string/video_level"
-                app:useSimpleSummaryProvider="true" />
-        </PreferenceCategory>
+           </PreferenceCategory>
     </PreferenceCategory>
 
     <!-- 音訊設定區塊 -->
@@ -113,23 +95,6 @@
                 app:title="@string/audio_bitrate"
                 app:useSimpleSummaryProvider="true" />
 
-            <!-- Byte Format 選擇 -->
-            <ListPreference
-                app:defaultValue="2"
-                app:entries="@array/audio_byte_format_entries"
-                app:entryValues="@array/audio_byte_format_values"
-                app:key="@string/audio_byte_format_key"
-                app:title="@string/audio_byte_format_title"
-                app:useSimpleSummaryProvider="true" />
-
-            <!-- 音訊檔次 (Profile) 僅供 AAC 使用 -->
-            <ListPreference
-                app:defaultValue="2"
-                app:entries="@array/aac_profile_entries"
-                app:entryValues="@array/aac_profile_values"
-                app:key="@string/audio_profile_key"
-                app:title="@string/audio_profile_title"
-                app:useSimpleSummaryProvider="true" />
         </PreferenceCategory>
     </PreferenceCategory>
 
@@ -184,7 +149,7 @@
             <SwitchPreference
                 app:defaultValue="false"
                 app:key="srt_regulator_enabled"
-                app:title="啟用位元率調節器"
+                app:title="啟用位元率調節器 (只對SRT有效)"
                 app:summary="根據網路狀況動態調整影像位元率" />
 
             <!-- 目標位元率 (kb/s) - 使用自訂樣式 -->
