@@ -36,7 +36,7 @@
     </string-array>
     <string-array name="endpoint_type_entries">
         <item>SRT (全編碼可用)</item>
-        <item>RTMP (只可用H.264及AAC編碼)</item>
+        <item>RTMP (H.264及AAC編碼)</item>
     </string-array>
     <string-array name="endpoint_type_values">
         <item>srt</item>
@@ -45,16 +45,16 @@
     <!-- 音訊採樣率選項 -->
     <string-array name="audio_sample_rate_entries">
         <item>8000 Hz</item>
+        <item>12000 Hz</item>
         <item>16000 Hz</item>
-        <item>22050 Hz</item>
-        <item>44100 Hz</item>
+        <item>24000 Hz</item>
         <item>48000 Hz</item>
     </string-array>
     <string-array name="audio_sample_rate_values">
         <item>8000</item>
+        <item>12000</item>
         <item>16000</item>
-        <item>22050</item>
-        <item>44100</item>
+        <item>24000</item>
         <item>48000</item>
     </string-array>
 
