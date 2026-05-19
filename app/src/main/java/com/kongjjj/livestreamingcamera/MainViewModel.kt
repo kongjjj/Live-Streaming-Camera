@@ -614,14 +614,21 @@ class MainViewModel(
             else -> MediaFormat.MIMETYPE_AUDIO_AAC
         }
 
-        // Opus 必須使用 48000Hz，如果直播用 Opus，採樣率強制為 48k (AAC 也支援 48k)
-        val sampleRate = if (liveMimeType == MediaFormat.MIMETYPE_AUDIO_OPUS) {
-            48000
-        } else {
-            (prefs.getString(audioSampleRateKey, "44100") ?: "44100").toInt()
+        // 讀取偏好設定
+        var sampleRate = (prefs.getString(audioSampleRateKey, "48000") ?: "48000").toInt()
+        
+        // OPUS 安全檢查：如果採樣率不在支援列表中，回退到 48000
+        val supportedOpusRates = listOf(8000, 12000, 16000, 24000, 48000)
+        if (liveMimeType == MediaFormat.MIMETYPE_AUDIO_OPUS && sampleRate !in supportedOpusRates) {
+            Log.w(TAG, "不支援的 Opus 採樣率: $sampleRate, 已回退到 48000 Hz")
+            sampleRate = 48000
         }
 
         val bitrate = (prefs.getString(audioBitrateKey, "128000") ?: "128000").toInt()
+        val byteFormat = AudioFormat.ENCODING_PCM_16BIT // 移出設定，使用標準 16-bit
+        val profile = 2 // 移出設定，使用 AACObjectLC 作為預設
+
+        Log.d(TAG, "套用音訊設定: $encoderType, $sampleRate Hz, $bitrate bps, Format: $byteFormat, Profile: $profile")
 
         if (streamer.second.isStreamingFlow.value) {
             // 錄影中，僅更新直播管道
@@ -629,7 +636,9 @@ class MainViewModel(
                 mimeType = liveMimeType,
                 sampleRate = sampleRate,
                 channelConfig = AudioFormat.CHANNEL_IN_STEREO,
-                startBitrate = bitrate
+                byteFormat = byteFormat,
+                startBitrate = bitrate,
+                profile = profile
             )
             (streamer.first as? IConfigurableAudioEncodingPipelineOutput)?.setAudioCodecConfig(config)
         } else {
@@ -637,19 +646,22 @@ class MainViewModel(
             // 第一管道 (直播): 使用用戶選擇的編碼器 (AAC 或 OPUS)
             val liveCodec = DualStreamerAudioCodecConfig(
                 mimeType = liveMimeType,
-                startBitrate = bitrate
+                startBitrate = bitrate,
+                profile = profile
             )
             // 第二管道 (錄影): 強制使用 AAC 以確保 MP4 相容性
             val recordCodec = DualStreamerAudioCodecConfig(
                 mimeType = MediaFormat.MIMETYPE_AUDIO_AAC,
-                startBitrate = 128_000
+                startBitrate = 128_000,
+                profile = 2 // 錄影固定用 LC 確保相容性
             )
 
             val dualConfig = DualStreamerAudioConfig(
                 firstAudioCodecConfig = liveCodec,
                 secondAudioCodecConfig = recordCodec,
                 sampleRate = sampleRate,
-                channelConfig = AudioFormat.CHANNEL_IN_STEREO
+                channelConfig = AudioFormat.CHANNEL_IN_STEREO,
+                byteFormat = byteFormat
             )
             streamer.setAudioConfig(dualConfig)
         }
