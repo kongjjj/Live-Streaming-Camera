@@ -16,6 +16,17 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- 一開三輔助線 Overlay -->
+    <com.kongjjj.livestreamingcamera.ui.SplitThreeOverlay
+        android:id="@+id/splitThreeOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <!-- 聊天列表 -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/chatRecyclerView"
@@ -352,6 +363,16 @@
                 android:background="@drawable/control_button_bg"
                 android:src="@drawable/ic_filter_b_and_w"
                 android:contentDescription="@string/grayscale_desc" />
+
+            <!-- 一開三按鈕 -->
+            <ImageButton
+                android:id="@+id/splitThreeButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_split_three"
+                android:contentDescription="一開三鏡頭" />
 
         </LinearLayout>
 
