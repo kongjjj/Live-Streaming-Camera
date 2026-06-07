@@ -20,9 +20,19 @@ class EffectShaderProvider : ShaderProvider {
             uniform int uBlur;
             uniform int uMosaic;
             uniform int uSepia;
+            uniform int uSplitThree;
 
             void main() {
-                vec4 color = texture2D($samplerVarName, $fragCoordsVarName);
+                vec2 uv = $fragCoordsVarName;
+                
+                // 一開三鏡頭特效 (顯示鏡頭中央 1/3 部分 - 水平重複)
+                if (uSplitThree == 1) {
+                    float segment = floor(uv.x * 3.0);
+                    uv.x = (uv.x * 3.0) - segment; // 將 x 對齊到 [0, 1]
+                    uv.x = (uv.x / 3.0) + (1.0 / 3.0); // 映射到原始座標的 [1/3, 2/3] (中央部分)
+                }
+
+                vec4 color = texture2D($samplerVarName, uv);
                 vec3 finalColor = color.rgb;
 
                 // 0. 馬賽克

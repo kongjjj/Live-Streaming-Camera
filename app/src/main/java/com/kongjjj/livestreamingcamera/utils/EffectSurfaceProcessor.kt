@@ -53,16 +53,18 @@ class EffectSurfaceProcessor(
     private var isBlur = false
     private var isMosaic = false
     private var isSepia = false
+    private var isSplitThree = false
 
     private val surfaceToEffectsMap: MutableMap<Surface, Boolean> = HashMap()
     private var inputSurfaceSize = Size(0, 0)
 
-    fun updateEffects(grayscale: Boolean, beauty: Boolean, blur: Boolean, mosaic: Boolean, sepia: Boolean) {
+    fun updateEffects(grayscale: Boolean, beauty: Boolean, blur: Boolean, mosaic: Boolean, sepia: Boolean, splitThree: Boolean) {
         isGrayscale = grayscale
         isBeauty = beauty
         isBlur = blur
         isMosaic = mosaic
         isSepia = sepia
+        isSplitThree = splitThree
     }
 
     /**
@@ -297,6 +299,7 @@ class EffectSurfaceProcessor(
             GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uBlur"), if (enabled && isBlur) 1 else 0)
             GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uMosaic"), if (enabled && isMosaic) 1 else 0)
             GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uSepia"), if (enabled && isSepia) 1 else 0)
+            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uSplitThree"), if (enabled && isSplitThree) 1 else 0)
         }
     }
 
