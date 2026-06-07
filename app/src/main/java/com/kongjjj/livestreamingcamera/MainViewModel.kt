@@ -159,6 +159,8 @@ class MainViewModel(
     val isMosaic: LiveData<Boolean> = _isMosaic
     private val _isSepia = MutableLiveData(false)
     val isSepia: LiveData<Boolean> = _isSepia
+    private val _isSplitThree = MutableLiveData(false)
+    val isSplitThree: LiveData<Boolean> = _isSplitThree
 
     @Suppress("unused") private val audioManager = application.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -282,7 +284,6 @@ class MainViewModel(
                     val videoEncoder = (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
                     val currentBitrate = (videoEncoder?.bitrate ?: 0) / 1000
                     
-                    // 從第一個管道的 endpoint 拿 metrics
                     // 注意：RtmpEndpoint 可能未實作 getMetrics() 並拋出 NotImplementedError
                     val metrics = if (endpointType == "srt") {
                         try { streamer.first.endpoint.metrics } catch (_: Exception) { null } catch (_: NotImplementedError) { null }
@@ -315,7 +316,7 @@ class MainViewModel(
                             val loss = if (pktSent > 0) (pktSndLoss.toFloat() / pktSent) * 100 else 0f
                             StreamStats(
                                 bitrateKbps = currentBitrate,
-                                uploadSpeedKbps = uploadSpeedKbps,
+                                uploadSpeedKbps = (mbpsSendRate * 1000).toInt(), // 使用 SRT 內部速度
                                 maxBitrateKbps = maxBitrate,
                                 rttMs = msRTT.toInt(),
                                 lossPercent = loss,
@@ -829,13 +830,22 @@ class MainViewModel(
         return newValue
     }
 
+    fun toggleSplitThree(): Boolean {
+        val current = _isSplitThree.value ?: false
+        val newValue = !current
+        _isSplitThree.value = newValue
+        updateProcessorEffects()
+        return newValue
+    }
+
     private fun updateProcessorEffects() {
         effectProcessor?.updateEffects(
             _isGrayscale.value ?: false,
             _isBeauty.value ?: false,
             _isBlur.value ?: false,
             _isMosaic.value ?: false,
-            _isSepia.value ?: false
+            _isSepia.value ?: false,
+            _isSplitThree.value ?: false
         )
     }
 

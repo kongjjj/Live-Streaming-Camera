@@ -1518,6 +1518,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         viewModel.isSepia.observe(this) { isEnabled ->
             binding.sepiaButton.alpha = if (isEnabled) 1.0f else 0.5f
         }
+
+        binding.splitThreeButton.setOnClickListener {
+            val isEnabled = viewModel.toggleSplitThree()
+            toast("一開三鏡頭: ${if (isEnabled) "開啟" else "關閉"}")
+        }
+        viewModel.isSplitThree.observe(this) { isEnabled ->
+            binding.splitThreeButton.alpha = if (isEnabled) 1.0f else 0.5f
+            binding.splitThreeOverlay.visibility = if (isEnabled) View.VISIBLE else View.GONE
+        }
     }
 
     private fun toggleBlackOverlay() {
@@ -1586,6 +1595,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.grayscaleButton.background = null
         binding.grayscaleButton.setImageDrawable(null)
         binding.grayscaleButton.alpha = 0f
+
+        binding.splitThreeButton.background = null
+        binding.splitThreeButton.setImageDrawable(null)
+        binding.splitThreeButton.alpha = 0f
 
         binding.switchCameraButton.background = null
         binding.switchCameraButton.setImageDrawable(null)
@@ -1672,6 +1685,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.grayscaleButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.grayscaleButton.setImageResource(R.drawable.ic_filter_b_and_w)
         binding.grayscaleButton.alpha = if (viewModel.isGrayscale.value == true) 1.0f else 0.5f
+
+        binding.splitThreeButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
+        binding.splitThreeButton.setImageResource(R.drawable.ic_split_three)
+        binding.splitThreeButton.alpha = if (viewModel.isSplitThree.value == true) 1.0f else 0.5f
 
         binding.switchCameraButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
         binding.switchCameraButton.setImageResource(R.drawable.ic_switch_camera)
