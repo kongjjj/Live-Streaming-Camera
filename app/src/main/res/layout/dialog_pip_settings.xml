@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pip_settings_title"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/pipEnableSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/enable_pip"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pip_position"
+            android:textSize="16sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 4x3 Grid (4 columns, 3 rows) -->
+        <GridLayout
+            android:id="@+id/pipPositionGrid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="4"
+            android:rowCount="3"
+            android:layout_marginBottom="16dp">
+            <ToggleButton android:id="@+id/pos0" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="1" android:textOn="1" />
+            <ToggleButton android:id="@+id/pos1" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="2" android:textOn="2" />
+            <ToggleButton android:id="@+id/pos2" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="3" android:textOn="3" />
+            <ToggleButton android:id="@+id/pos3" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="4" android:textOn="4" />
+            <ToggleButton android:id="@+id/pos4" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="5" android:textOn="5" />
+            <ToggleButton android:id="@+id/pos5" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="6" android:textOn="6" />
+            <ToggleButton android:id="@+id/pos6" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="7" android:textOn="7" />
+            <ToggleButton android:id="@+id/pos7" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="8" android:textOn="8" />
+            <ToggleButton android:id="@+id/pos8" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="9" android:textOn="9" />
+            <ToggleButton android:id="@+id/pos9" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="10" android:textOn="10" />
+            <ToggleButton android:id="@+id/pos10" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="11" android:textOn="11" />
+            <ToggleButton android:id="@+id/pos11" android:layout_width="0dp" android:layout_height="40dp" android:layout_columnWeight="1" android:textOff="12" android:textOn="12" />
+
+        </GridLayout>
+
+    </LinearLayout>
+</ScrollView>

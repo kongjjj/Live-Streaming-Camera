@@ -211,6 +211,15 @@
             android:textSize="16sp"
             android:background="?attr/selectableItemBackground" />
         <TextView
+            android:id="@+id/menuItemPiP"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="PiP 設定　　"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+        <TextView
             android:id="@+id/menuItemSettings"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
