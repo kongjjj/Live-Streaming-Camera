@@ -132,4 +132,11 @@
     <string name="mosaic_desc">馬賽克</string>
     <string name="sepia_desc">復古</string>
     <string name="effects_desc">特效</string>
+
+    <!-- PiP Settings -->
+    <string name="menu_pip_settings">PiP 設定　　　</string>
+    <string name="pip_settings_title">PiP (畫中畫)設定 [實驗性質，可能會令直播不穩定及手機發熱]</string>
+    <string name="enable_pip">啟用 PiP</string>
+    <string name="pip_position">位置 (3x4 網格)</string>
+
 </resources>
