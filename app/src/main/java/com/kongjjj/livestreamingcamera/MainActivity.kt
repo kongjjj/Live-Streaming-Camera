@@ -1378,6 +1378,38 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         startActivity(Intent(this, KnownIssuesActivity::class.java))
     }
 
+    private fun showPiPSettingsDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pip_settings, null)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setPositiveButton("確定", null)
+            .create()
+
+        val pipEnableSwitch = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.pipEnableSwitch)
+        val pipPositionGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.pipPositionGrid)
+
+        // Initialize state
+        pipEnableSwitch.isChecked = viewModel.isPipEnabled.value ?: false
+        
+        val currentPos = viewModel.pipPosition.value ?: 8
+        for (i in 0 until pipPositionGrid.childCount) {
+            val child = pipPositionGrid.getChildAt(i) as android.widget.ToggleButton
+            child.isChecked = (i == currentPos)
+            child.setOnClickListener {
+                for (j in 0 until pipPositionGrid.childCount) {
+                    (pipPositionGrid.getChildAt(j) as android.widget.ToggleButton).isChecked = (i == j)
+                }
+                viewModel.setPipPosition(i)
+            }
+        }
+
+        pipEnableSwitch.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setPipEnabled(isChecked)
+        }
+
+        dialog.show()
+    }
+
     // ---------- 沉浸模式控制 ----------
     private fun enterImmersiveMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -1799,6 +1831,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.menuItemChatSettings.setOnClickListener { 
             hideCustomMenu()
             openTwitchChatSettings() 
+        }
+        binding.menuItemPiP.setOnClickListener {
+            hideCustomMenu()
+            showPiPSettingsDialog()
         }
         binding.menuItemSettings.setOnClickListener { 
             hideCustomMenu()
