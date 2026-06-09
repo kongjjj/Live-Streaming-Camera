@@ -22,6 +22,12 @@ class EffectShaderProvider : ShaderProvider {
             uniform int uSepia;
             uniform int uSplitThree;
 
+            // PiP 相關
+            uniform int uPipEnabled;
+            uniform samplerExternalOES uPipSampler;
+            uniform vec2 uPipPosition; // 左下角座標 [0, 1]
+            uniform vec2 uPipSize;     // 寬高 [0, 1]
+
             void main() {
                 vec2 uv = $fragCoordsVarName;
                 
@@ -74,6 +80,17 @@ class EffectShaderProvider : ShaderProvider {
                 if (uGrayscale == 1) {
                     float gray = dot(finalColor, vec3(0.299, 0.587, 0.114));
                     finalColor = vec3(gray);
+                }
+
+                // 套用 PiP
+                if (uPipEnabled == 1) {
+                    if (uv.x >= uPipPosition.x && uv.x <= (uPipPosition.x + uPipSize.x) &&
+                        uv.y >= uPipPosition.y && uv.y <= (uPipPosition.y + uPipSize.y)) {
+                        vec2 pipUv = (uv - uPipPosition) / uPipSize;
+                        // 注意: samplerExternalOES 的 UV 座標可能需要根據旋轉調整，
+                        // 這裡簡化處理，假設輸入已經對齊。
+                        finalColor = texture2D(uPipSampler, pipUv).rgb;
+                    }
                 }
 
                 gl_FragColor = vec4(finalColor, color.a * uAlphaScale);
