@@ -1387,9 +1387,31 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         val pipEnableSwitch = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.pipEnableSwitch)
         val pipPositionGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.pipPositionGrid)
+        val pipPaddingSeekBar = dialogView.findViewById<android.widget.SeekBar>(R.id.pipPaddingSeekBar)
+        val pipPaddingValue = dialogView.findViewById<android.widget.TextView>(R.id.pipPaddingValue)
+        val pipRoundedSwitch = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.pipRoundedSwitch)
 
         // Initialize state
         pipEnableSwitch.isChecked = viewModel.isPipEnabled.value ?: false
+        pipRoundedSwitch.isChecked = viewModel.pipRounded.value ?: false
+        
+        val currentPadding = viewModel.pipPadding.value ?: 0
+        pipPaddingSeekBar.progress = currentPadding / 10
+        pipPaddingValue.text = currentPadding.toString()
+
+        pipPaddingSeekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
+                val padding = progress * 10
+                pipPaddingValue.text = padding.toString()
+                viewModel.setPipPadding(padding)
+            }
+            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+        })
+
+        pipRoundedSwitch.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setPipRounded(isChecked)
+        }
         
         val currentPos = viewModel.pipPosition.value ?: 8
         for (i in 0 until pipPositionGrid.childCount) {

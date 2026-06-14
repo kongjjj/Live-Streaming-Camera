@@ -175,6 +175,10 @@ class MainViewModel(
     val pipPosition: LiveData<Int> = _pipPosition
     private val _pipSize = MutableLiveData(0.25f) // 預設 1/4
     val pipSize: LiveData<Float> = _pipSize
+    private val _pipPadding = MutableLiveData(0) // 預設 0
+    val pipPadding: LiveData<Int> = _pipPadding
+    private val _pipRounded = MutableLiveData(false) // 預設無圓角
+    val pipRounded: LiveData<Boolean> = _pipRounded
 
     private var pipCameraSource: ICameraSource? = null
 
@@ -918,6 +922,16 @@ class MainViewModel(
         updateProcessorEffects()
     }
 
+    fun setPipPadding(padding: Int) {
+        _pipPadding.value = padding
+        updateProcessorEffects()
+    }
+
+    fun setPipRounded(rounded: Boolean) {
+        _pipRounded.value = rounded
+        updateProcessorEffects()
+    }
+
     private fun updateProcessorEffects() {
         val posIndex = _pipPosition.value ?: 8
         val colCount = 4
@@ -932,12 +946,12 @@ class MainViewModel(
         val cellHeight = 1.0f / rowCount.toFloat()
         
         // PiP 畫面大小：直接填滿整個格子
-        val pipW = cellWidth
-        val pipH = cellHeight
+        var pipW = cellWidth
+        var pipH = cellHeight
         
         // 計算座標 (左下角)
         // X 座標：從左到右 (0 -> 1)
-        val px = col * cellWidth
+        var px = col * cellWidth
         
         // Y 座標修正：
         // 為了讓使用者看到的 row 0 (1,2,3,4) 出現在直播畫面的最頂端，
@@ -945,7 +959,27 @@ class MainViewModel(
         // row 0 -> py = 0.0
         // row 1 -> py = 0.33
         // row 2 -> py = 0.66
-        val py = row * cellHeight
+        var py = row * cellHeight
+
+        // 處理 Padding
+        val paddingPx = (_pipPadding.value ?: 0).toFloat()
+        if (paddingPx > 0) {
+            val res = prefs.getString(videoResolutionKey, "1280x720") ?: "1280x720"
+            val parts = res.split("x")
+            val screenW = parts[0].toFloatOrNull() ?: 1280f
+            val screenH = parts[1].toFloatOrNull() ?: 720f
+            
+            val normPaddingX = paddingPx / screenW
+            val normPaddingY = paddingPx / screenH
+            
+            // 縮小 PiP 大小以騰出空間
+            pipW -= normPaddingX * 2.0f
+            pipH -= normPaddingY * 2.0f
+            
+            // 調整起始座標以保持在格子中央
+            px += normPaddingX
+            py += normPaddingY
+        }
         
         effectProcessor?.updateEffects(
             grayscale = _isGrayscale.value ?: false,
@@ -956,7 +990,8 @@ class MainViewModel(
             splitThree = _isSplitThree.value ?: false,
             pipEnabled = _isPipEnabled.value ?: false,
             pipPos = floatArrayOf(px, py),
-            pipSz = floatArrayOf(pipW, pipH)
+            pipSz = floatArrayOf(pipW, pipH),
+            pipRounded = _pipRounded.value ?: false
         )
     }
 
