@@ -44,14 +44,15 @@
                 app:useSimpleSummaryProvider="true" />
 
             <!-- 影像位元率滑桿 (單位 kbps) -->
-            <SeekBarPreference
+            <com.kongjjj.livestreamingcamera.CustomSeekBarPreference
                 android:max="10000"
                 app:defaultValue="@string/default_video_bitrate"
                 app:key="@string/video_bitrate_key"
                 app:min="500"
                 app:showSeekBarValue="true"
                 app:title="@string/video_bitrate"
-                app:seekBarIncrement="500"
+                app:seekBarIncrement="100"
+                app:updatesContinuously="true"
                 app:useSimpleSummaryProvider="true" />
            </PreferenceCategory>
     </PreferenceCategory>
@@ -160,7 +161,8 @@
                 app:min="500"
                 app:showSeekBarValue="true"
                 app:title="目標位元率 (kb/s)"
-                app:seekBarIncrement="500"
+                app:seekBarIncrement="100"
+                app:updatesContinuously="true"
                 app:useSimpleSummaryProvider="true" />
 
             <!-- 最小位元率 (kb/s) - 使用自訂樣式 -->
@@ -171,7 +173,8 @@
                 app:min="100"
                 app:showSeekBarValue="true"
                 app:title="最小位元率 (kb/s)"
-                app:seekBarIncrement="100"
+                app:seekBarIncrement="50"
+                app:updatesContinuously="true"
                 app:useSimpleSummaryProvider="true" />
 
             <!-- 演算法選擇 -->
