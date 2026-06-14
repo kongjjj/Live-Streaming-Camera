@@ -55,5 +55,44 @@
 
         </GridLayout>
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/pip_padding"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/pipPaddingValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="16sp"
+                android:textColor="@android:color/holo_blue_dark" />
+        </LinearLayout>
+
+        <SeekBar
+            android:id="@+id/pipPaddingSeekBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="5"
+            android:progress="0"
+            android:layout_marginBottom="16dp" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/pipRoundedSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/pip_rounded_corners"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
     </LinearLayout>
 </ScrollView>
