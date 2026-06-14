@@ -55,6 +55,7 @@ class EffectSurfaceProcessor(
     private var isMosaic = false
     private var isSepia = false
     private var isSplitThree = false
+    private var isPipRounded = false
 
     private val surfaceToEffectsMap: MutableMap<Surface, Boolean> = HashMap()
     private var inputSurfaceSize = Size(0, 0)
@@ -77,7 +78,8 @@ class EffectSurfaceProcessor(
         splitThree: Boolean,
         pipEnabled: Boolean = false,
         pipPos: FloatArray? = null,
-        pipSz: FloatArray? = null
+        pipSz: FloatArray? = null,
+        pipRounded: Boolean = false
     ) {
         isGrayscale = grayscale
         isBeauty = beauty
@@ -86,6 +88,7 @@ class EffectSurfaceProcessor(
         isSepia = sepia
         isSplitThree = splitThree
         isPipEnabled = pipEnabled
+        isPipRounded = pipRounded
         pipPos?.let { pipPosition = it }
         pipSz?.let { pipSize = it }
     }
@@ -349,6 +352,7 @@ class EffectSurfaceProcessor(
             GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uSplitThree"), if (enabled && isSplitThree) 1 else 0)
 
             GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uPipEnabled"), if (enabled && isPipEnabled) 1 else 0)
+            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uPipRounded"), if (enabled && isPipRounded) 1 else 0)
             if (enabled && isPipEnabled) {
                 GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
                 GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, pipTextureId)

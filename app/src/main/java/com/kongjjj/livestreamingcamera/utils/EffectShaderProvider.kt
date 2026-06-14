@@ -24,6 +24,7 @@ class EffectShaderProvider : ShaderProvider {
 
             // PiP 相關
             uniform int uPipEnabled;
+            uniform int uPipRounded;
             uniform samplerExternalOES uPipSampler;
             uniform vec2 uPipPosition; // 左下角座標 [0, 1]
             uniform vec2 uPipSize;     // 寬高 [0, 1]
@@ -86,10 +87,24 @@ class EffectShaderProvider : ShaderProvider {
                 if (uPipEnabled == 1) {
                     if (uv.x >= uPipPosition.x && uv.x <= (uPipPosition.x + uPipSize.x) &&
                         uv.y >= uPipPosition.y && uv.y <= (uPipPosition.y + uPipSize.y)) {
+                        
                         vec2 pipUv = (uv - uPipPosition) / uPipSize;
-                        // 注意: samplerExternalOES 的 UV 座標可能需要根據旋轉調整，
-                        // 這裡簡化處理，假設輸入已經對齊。
-                        finalColor = texture2D(uPipSampler, pipUv).rgb;
+                        bool drawPip = true;
+                        
+                        if (uPipRounded == 1) {
+                            float radius = 0.15; // 圓角半徑 (相對於 PiP 大小的比例)
+                            // 檢查是否在四個角的圓角範圍外
+                            vec2 dist = min(pipUv, 1.0 - pipUv);
+                            if (dist.x < radius && dist.y < radius) {
+                                if (length(vec2(radius) - dist) > radius) {
+                                    drawPip = false;
+                                }
+                            }
+                        }
+                        
+                        if (drawPip) {
+                            finalColor = texture2D(uPipSampler, pipUv).rgb;
+                        }
                     }
                 }
 
