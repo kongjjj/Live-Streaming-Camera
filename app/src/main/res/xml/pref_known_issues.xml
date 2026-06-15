@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.60">
+        <Preference
+            android:selectable="false"
+            android:title="放大按鈕及曝光按鈕改成拉杆，更容易操作。"
+            android:summary=" " />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.59">
         <Preference
             android:selectable="false"
