@@ -253,8 +253,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private lateinit var audioLevelFlow: AudioLevelFlow
 
     // 變焦相關
-    private val zoomLevels = floatArrayOf(1.0f, 2.0f, 5.0f, 10.0f)
-    private var currentZoomIndex = 0
 
     // ---------- 後置鏡頭按鈕列 ----------
     private lateinit var cameraButtonsContainer: LinearLayout
@@ -302,6 +300,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         setupCameraControls()
         setupBluetoothButton()
         setupZoomButton()
+        setupSliders()
         setupRecordButton()
 
         viewModel.streamStats.observe(this) { stats ->
@@ -760,18 +759,34 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun setupZoomButton() {
         binding.zoomButton.setOnClickListener {
-            val cameraSource = viewModel.cameraSource
-            if (cameraSource == null) {
-                toast("相機尚未初始化")
-                return@setOnClickListener
+            val isVisible = binding.zoomSliderContainer.visibility == View.VISIBLE
+            binding.zoomSliderContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
+            if (!isVisible) {
+                // 初始化 Slider 值
+                lifecycleScope.launch {
+                    val currentZoom = viewModel.cameraSource?.settings?.zoom?.getZoomRatio() ?: 1.0f
+                    binding.zoomSlider.value = currentZoom.coerceIn(1.0f, 10.0f)
+                    binding.zoomValueText.text = String.format(Locale.US, "變焦: %.1fx", currentZoom)
+                }
             }
+        }
+    }
 
-            currentZoomIndex = (currentZoomIndex + 1) % zoomLevels.size
-            val targetZoom = zoomLevels[currentZoomIndex]
+    private fun setupSliders() {
+        binding.zoomSlider.addOnChangeListener { _, value, fromUser ->
+            binding.zoomValueText.text = String.format(Locale.US, "變焦: %.1fx", value)
+            if (fromUser) {
+                lifecycleScope.launch {
+                    viewModel.setZoomRatio(value)
+                }
+            }
+        }
 
-            lifecycleScope.launch {
-                viewModel.setZoomRatio(targetZoom)
-                toast(String.format(Locale.US, "變焦: %.1fx", targetZoom))
+        binding.exposureSlider.addOnChangeListener { _, value, fromUser ->
+            val exposureValue = value.toInt()
+            binding.exposureValueText.text = "曝光: ${if (exposureValue > 0) "+$exposureValue" else exposureValue}"
+            if (fromUser) {
+                viewModel.setExposureCompensation(exposureValue)
             }
         }
     }
@@ -1464,10 +1479,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.blackScreenButton.setOnClickListener { toggleBlackOverlay() }
 
         binding.cameraSettingButton.setOnClickListener {
-            binding.hiddenCameraControls.visibility = if (binding.hiddenCameraControls.visibility == View.VISIBLE) {
-                View.GONE
+            if (binding.hiddenCameraControls.visibility == View.VISIBLE) {
+                binding.hiddenCameraControls.visibility = View.GONE
+                binding.zoomSliderContainer.visibility = View.GONE
+                binding.exposureSliderContainer.visibility = View.GONE
             } else {
-                View.VISIBLE
+                binding.hiddenCameraControls.visibility = View.VISIBLE
             }
         }
 
@@ -1501,15 +1518,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         viewModel.whiteBalanceMode.observe(this) { updateWhiteBalanceButton() }
 
         binding.exposureButton.setOnClickListener {
-            val newValue = viewModel.adjustExposure(true)
-            updateExposureButton()
-            toast("曝光補償: ${if (newValue > 0) "+$newValue" else newValue}")
-        }
-        binding.exposureButton.setOnLongClickListener {
-            val newValue = viewModel.adjustExposure(false)
-            updateExposureButton()
-            toast("曝光補償: ${if (newValue > 0) "+$newValue" else newValue}")
-            true
+            val isVisible = binding.exposureSliderContainer.visibility == View.VISIBLE
+            binding.exposureSliderContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
+            if (!isVisible) {
+                val currentExposure = viewModel.exposureCompensation.value ?: 0
+                binding.exposureSlider.value = currentExposure.toFloat()
+                binding.exposureValueText.text = "曝光: ${if (currentExposure > 0) "+$currentExposure" else currentExposure}"
+            }
         }
         viewModel.exposureCompensation.observe(this) { updateExposureButton() }
 
@@ -1819,16 +1834,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private fun updateExposureButton() {
-        val value = viewModel.exposureCompensation.value ?: 0
-        val icon = when (value) {
-            -2 -> R.drawable.ic_exposure_minus_2
-            -1 -> R.drawable.ic_exposure_minus_1
-            0 -> R.drawable.ic_exposure_0
-            1 -> R.drawable.ic_exposure_plus_1
-            2 -> R.drawable.ic_exposure_plus_2
-            else -> R.drawable.ic_exposure_0
-        }
-        binding.exposureButton.setImageResource(icon)
+        binding.exposureButton.setImageResource(R.drawable.ic_exposure)
     }
 
     private fun updateFocusButton() {

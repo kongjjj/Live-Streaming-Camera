@@ -775,6 +775,11 @@ class MainViewModel(
         return nextMode
     }
 
+    fun setExposureCompensation(value: Int) {
+        _exposureCompensation.value = value
+        viewModelScope.launch { try { cameraSource?.settings?.exposure?.setCompensation(value) } catch (_: Exception) { } }
+    }
+
     fun adjustExposure(increase: Boolean): Int {
         val values = listOf(-2, -1, 0, 1, 2)
         val nextValue = values[(values.indexOf(_exposureCompensation.value ?: 0) + (if (increase) 1 else -1) + values.size) % values.size]
