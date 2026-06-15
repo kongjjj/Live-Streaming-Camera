@@ -315,6 +315,75 @@
         app:layout_constraintBottom_toTopOf="@+id/cameraControls"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- 曝光拉杆容器 -->
+        <LinearLayout
+            android:id="@+id/exposureSliderContainer"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/slider_bg"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/exposureValueText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="曝光: 0"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/exposureSlider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="-3.0"
+                android:valueTo="3.0"
+                android:stepSize="1.0"
+                app:labelBehavior="gone"
+                app:tickVisible="true"
+                app:thumbColor="@color/tiffany_blue"
+                app:trackColorActive="@color/tiffany_blue"
+                app:trackColorInactive="#4081D8D0"
+                app:tickColorActive="@color/tiffany_blue"
+                app:tickColorInactive="#8081D8D0"
+                app:trackHeight="4dp" />
+        </LinearLayout>
+
+        <!-- 變焦拉杆容器 -->
+        <LinearLayout
+            android:id="@+id/zoomSliderContainer"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/slider_bg"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/zoomValueText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="變焦: 1.0x"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/zoomSlider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="1.0"
+                android:valueTo="10.0"
+                android:stepSize="0.1"
+                app:labelBehavior="gone"
+                app:thumbColor="@color/tiffany_blue"
+                app:trackColorActive="@color/tiffany_blue"
+                app:trackColorInactive="#4081D8D0"
+                app:trackHeight="4dp" />
+        </LinearLayout>
+
         <!-- 隱藏特效按鈕列 -->
         <LinearLayout
             android:id="@+id/hiddenEffectControls"
