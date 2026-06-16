@@ -268,6 +268,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     // ---------- 直播資訊資料類別 ----------
     private data class StreamInfo(val viewers: Int, val createdAt: Long?) // createdAt 為毫秒時間戳
 
+    private var isButtonsCollapsed = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -1481,8 +1483,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.cameraSettingButton.setOnClickListener {
             if (binding.hiddenCameraControls.visibility == View.VISIBLE) {
                 binding.hiddenCameraControls.visibility = View.GONE
-                binding.zoomSliderContainer.visibility = View.GONE
-                binding.exposureSliderContainer.visibility = View.GONE
+                // 移除這裡對拉桿容器的隱藏邏輯
             } else {
                 binding.hiddenCameraControls.visibility = View.VISIBLE
             }
@@ -1607,12 +1608,98 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             // 退出黑屏後，重新套用偏好設定
             updateOverlayVisibility()
             applyStatusBarVisibility()
+            // 如果當前是收合狀態，需重新套用收合位置（不帶動畫）
+            if (isButtonsCollapsed) {
+                applyButtonsCollapsedState(false)
+            }
         } else {
             binding.blackOverlay.isVisible = true
             hideAllButtons()
             enterImmersiveMode()
             isBlackOverlayVisible = true
         }
+    }
+
+    private fun toggleButtonsCollapse() {
+        if (isButtonsCollapsed) {
+            expandButtons()
+        } else {
+            collapseButtons()
+        }
+        isButtonsCollapsed = !isButtonsCollapsed
+    }
+
+    private fun collapseButtons() {
+        val step = 49.dpToPx().toFloat()
+
+        // 右上角動畫：錄影按鈕(index 2)與聊天按鈕(index 1)縮入選單按鈕(index 0)
+        binding.chatButton.animate().translationY(-step).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
+        binding.recordButton.animate().translationY(-step * 2).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
+
+        // 右下角動畫：靜音至黑屏5個按鈕縮入直播按鈕
+        binding.muteButton.animate().translationX(step).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
+        binding.bluetoothButton.animate().translationX(step * 2).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
+        binding.effectsMenuButton.animate().translationX(step * 3).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
+        binding.cameraSettingButton.animate().translationX(step * 4).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
+        binding.blackScreenButton.animate().translationX(step * 5).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).withEndAction {
+            android.transition.TransitionManager.beginDelayedTransition(binding.root)
+            setButtonsVisibility(View.GONE)
+        }.start()
+    }
+
+    private fun expandButtons() {
+        android.transition.TransitionManager.beginDelayedTransition(binding.root)
+        setButtonsVisibility(View.VISIBLE)
+
+        binding.chatButton.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+        binding.recordButton.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+
+        binding.muteButton.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+        binding.bluetoothButton.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+        binding.effectsMenuButton.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+        binding.cameraSettingButton.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+        binding.blackScreenButton.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
+    }
+
+    private fun applyButtonsCollapsedState(animated: Boolean) {
+        if (animated) {
+            collapseButtons()
+        } else {
+            setButtonsVisibility(View.GONE)
+            // 直接設置位移確保位置正確（雖然 GONE 了，但 expand 時動畫起始點需要正確）
+            val step = 49.dpToPx().toFloat()
+            binding.chatButton.translationY = -step
+            binding.recordButton.translationY = -step * 2
+            binding.muteButton.translationX = step
+            binding.bluetoothButton.translationX = step * 2
+            binding.effectsMenuButton.translationX = step * 3
+            binding.cameraSettingButton.translationX = step * 4
+            binding.blackScreenButton.translationX = step * 5
+            
+            binding.chatButton.alpha = 0f
+            binding.recordButton.alpha = 0f
+            binding.muteButton.alpha = 0f
+            binding.bluetoothButton.alpha = 0f
+            binding.effectsMenuButton.alpha = 0f
+            binding.cameraSettingButton.alpha = 0f
+            binding.blackScreenButton.alpha = 0f
+            
+            binding.chatButton.scaleX = 0f
+            binding.chatButton.scaleY = 0f
+            binding.recordButton.scaleX = 0f
+            binding.recordButton.scaleY = 0f
+            // ...以此類推，但 GONE 已經足夠隱藏
+        }
+    }
+
+    private fun setButtonsVisibility(visibility: Int) {
+        binding.chatButton.visibility = visibility
+        binding.recordButton.visibility = visibility
+        binding.muteButton.visibility = visibility
+        binding.bluetoothButton.visibility = visibility
+        binding.effectsMenuButton.visibility = visibility
+        binding.cameraSettingButton.visibility = visibility
+        binding.blackScreenButton.visibility = visibility
     }
 
     private fun hideAllButtons() {
@@ -1854,6 +1941,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun bindProperties() {
         binding.menuButton.setOnClickListener { showCustomMenu() }
+        binding.menuButton.setOnLongClickListener {
+            toggleButtonsCollapse()
+            true
+        }
         binding.customMenuScrim.setOnClickListener { hideCustomMenu() }
         
         binding.menuItemChatSettings.setOnClickListener { 
