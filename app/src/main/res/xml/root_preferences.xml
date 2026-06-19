@@ -281,6 +281,18 @@
             app:summary="開啟後應用將在背景持續運行，通知欄會顯示圖示" />
     </PreferenceCategory>
 
+    <!-- 匯出/匯入設定區塊 -->
+    <PreferenceCategory app:title="匯出/匯入設定">
+        <Preference
+            app:key="export_settings"
+            app:title="匯出設定"
+            app:summary="將目前設定儲存為 .bak 檔案" />
+        <Preference
+            app:key="import_settings"
+            app:title="匯入設定"
+            app:summary="從 .bak 檔案恢復設定" />
+    </PreferenceCategory>
+
     <!-- 底部 70dp 空白區域 -->
     <Preference
         android:layout="@layout/preference_spacer"

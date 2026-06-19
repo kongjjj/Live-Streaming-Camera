@@ -1,42 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory android:title="版本更新 Ver.2.60">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.1">
+        <Preference
+            android:selectable="false"
+            android:title="長按右上按鈕後，可隱藏其他按鈕，令介面更簡潔。"
+            android:summary=" " />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="版本更新 Ver.2.6.0">
         <Preference
             android:selectable="false"
             android:title="放大按鈕及曝光按鈕改成拉杆，更容易操作。"
             android:summary=" " />
     </PreferenceCategory>
-    <PreferenceCategory android:title="版本更新 Ver.2.59">
+    <PreferenceCategory android:title="版本更新 Ver.2.5.9">
         <Preference
             android:selectable="false"
             android:title="在前鏡畫中畫PiP功能加入邊界和圓角設定。"
             android:summary=" " />
     </PreferenceCategory>
-    <PreferenceCategory android:title="版本更新 Ver.2.58">
+    <PreferenceCategory android:title="版本更新 Ver.2.5.8">
         <Preference
             android:selectable="false"
             android:title="加入前鏡畫中畫PiP功能:在menu新加選項入開啟。"
             android:summary=" " />
     </PreferenceCategory>
-    <PreferenceCategory android:title="版本更新 Ver.2.57">
+    <PreferenceCategory android:title="版本更新 Ver.2.5.7">
         <Preference
             android:selectable="false"
             android:title="加入特效功能:一開三濾鏡。"
             android:summary=" " />
     </PreferenceCategory>
-    <PreferenceCategory android:title="版本更新 Ver.2.56">
+    <PreferenceCategory android:title="版本更新 Ver.2.5.6">
         <Preference
             android:selectable="false"
             android:title="修復了OPUS 取樣率：移除了 OPUS 的 48000 Hz 硬性限制，使其能夠使用設定中所選的取樣率（如 8000、12000、16000、24000、48000 Hz）。"
             android:summary=" " />
     </PreferenceCategory>
-    <PreferenceCategory android:title="版本更新 Ver.2.55">
+    <PreferenceCategory android:title="版本更新 Ver.2.5.5">
     <Preference
         android:selectable="false"
         android:title="修復了靜音按鈕在推流開始後失效的問題。"
         android:summary=" " />
     </PreferenceCategory>
-    <PreferenceCategory android:title="版本更新 Ver.2.54">
+    <PreferenceCategory android:title="版本更新 Ver.2.5.4">
         <Preference
             android:selectable="false"
             android:title="加入特效功能:馬賽克,復古,模糊,美顏,黑白濾鏡，影相功能有bug暫時disable。"
