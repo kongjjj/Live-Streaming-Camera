@@ -12,8 +12,8 @@ android {
         applicationId = "com.kongjjj.livestreamingcamera"
         minSdk = 24
         targetSdk = 36
-        versionCode = 79
-        versionName = "2.6.0"
+        versionCode = 80
+        versionName = "2.6.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
