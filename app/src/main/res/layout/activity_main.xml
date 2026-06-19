@@ -89,29 +89,51 @@
         android:layout_marginStart="16dp"
         android:layout_marginBottom="5dp" />
 
-    <!-- 傾斜角度 Overlay（新增） -->
-    <com.kongjjj.livestreamingcamera.ui.TiltOverlay
-        android:id="@+id/tiltOverlay"
-        android:layout_width="100dp"
-        android:layout_height="70dp"
+    <!-- 手震顯示條 -->
+    <com.kongjjj.livestreamingcamera.ui.ShakeLevelOverlay
+        android:id="@+id/shakeLevelOverlay"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
         android:layout_marginTop="15dp"
-        android:layout_marginEnd="0dp"
+        android:layout_marginStart="40dp"
         android:visibility="gone"
-        app:layout_constraintEnd_toStartOf="@+id/uploadSpeedOverlay"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
-    <!-- 上傳速度 Overlay（新增） -->
+    <!-- 旋轉角度 Overlay -->
+    <com.kongjjj.livestreamingcamera.ui.RotationOverlay
+        android:id="@+id/rotationOverlay"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginStart="40dp"
+        android:elevation="10dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/shakeLevelOverlay" />
+
+    <!-- 音量條 -->
+    <com.kongjjj.livestreamingcamera.ui.components.AudioLevelOverlay
+        android:id="@+id/audioLevelOverlay"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="15dp"
+        android:elevation="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rotationOverlay" />
+
+    <!-- 上傳速度 Overlay -->
     <com.kongjjj.livestreamingcamera.ui.components.UploadSpeedOverlay
         android:id="@+id/uploadSpeedOverlay"
-        android:layout_width="70dp"
-        android:layout_height="40dp"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
         android:layout_marginTop="15dp"
         android:layout_marginEnd="0dp"
         android:visibility="gone"
         app:layout_constraintEnd_toStartOf="@+id/networkSignalOverlay"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- 網路訊號 Overlay -->
     <com.kongjjj.livestreamingcamera.ui.NetworkSignalOverlay
         android:id="@+id/networkSignalOverlay"
         android:layout_width="50dp"
@@ -248,7 +270,6 @@
             android:background="?attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- 全黑覆蓋層 -->
     <View
         android:id="@+id/blackOverlay"
         android:layout_width="match_parent"
@@ -259,48 +280,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <!-- 左上角直播狀態文字 -->
-    <TextView
-        android:id="@+id/statusTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="40dp"
-        android:layout_marginTop="2dp"
-        android:paddingHorizontal="4dp"
-        android:paddingVertical="4dp"
-        android:text="RTMP 離線"
-        android:textColor="@android:color/white"
-        android:textSize="13sp"
-        android:background="@android:color/transparent"
-        android:elevation="10dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/audioLevelOverlay" />
-
-    <!-- 音量條 -->
-    <com.kongjjj.livestreamingcamera.ui.components.AudioLevelOverlay
-        android:id="@+id/audioLevelOverlay"
-        android:layout_width="120dp"
-        android:layout_height="12dp"
-        android:layout_marginStart="40dp"
-        android:layout_marginTop="15dp"
-        android:elevation="10dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/shakeLevelOverlay" />
-
-    <!-- 手震顯示條 -->
-    <com.kongjjj.livestreamingcamera.ui.ShakeLevelOverlay
-        android:id="@+id/shakeLevelOverlay"
-        android:layout_width="120dp"
-        android:layout_height="12dp"
-        android:layout_marginTop="15dp"
-        android:layout_marginStart="40dp"
-        android:visibility="gone"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-
-
 
     <!-- 右下角隱藏按鈕容器 (垂直排列選單) -->
     <LinearLayout
