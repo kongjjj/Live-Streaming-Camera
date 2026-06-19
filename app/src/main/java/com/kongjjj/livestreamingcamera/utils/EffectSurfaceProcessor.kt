@@ -359,6 +359,7 @@ class EffectSurfaceProcessor(
                 GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uPipSampler"), 1)
                 GLES20.glUniform2fv(GLES20.glGetUniformLocation(currentProgram, "uPipPosition"), 1, pipPosition, 0)
                 GLES20.glUniform2fv(GLES20.glGetUniformLocation(currentProgram, "uPipSize"), 1, pipSize, 0)
+                GLES20.glUniform2f(GLES20.glGetUniformLocation(currentProgram, "uScreenResolution"), inputSurfaceSize.width.toFloat(), inputSurfaceSize.height.toFloat())
             }
         }
     }
