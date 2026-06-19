@@ -37,8 +37,9 @@ class CustomSeekBarPreference @JvmOverloads constructor(
 
     // 重寫 value setter 來實現 Snap
     override fun setValue(value: Int) {
-        val snappedValue = Math.round(value.toFloat() / increment) * increment
-        super.setValue(snappedValue)
+        // 將數值的個位數與十位數歸零 (例如 2375 -> 2300)
+        val roundedValue = (value / 100) * 100
+        super.setValue(roundedValue)
     }
 
     private fun Float.dpToPx(context: Context): Float {

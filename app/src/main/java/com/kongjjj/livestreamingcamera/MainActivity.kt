@@ -726,14 +726,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val showNetwork = prefs.getBoolean(showNetworkSignalKey, true)
         val showShake = prefs.getBoolean(showShakeLevelKey, false)
         val showAudio = prefs.getBoolean(showAudioLevelKey, true)
-        val showTilt = prefs.getBoolean(showTiltKey, false)
+        val showRotation = prefs.getBoolean(showTiltKey, false)
 
         val showUploadSpeed = prefs.getBoolean(showUploadSpeedKey, false)
         binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
         binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
         binding.shakeLevelOverlay.visibility = if (showShake) View.VISIBLE else View.GONE
         binding.audioLevelOverlay.visibility = if (showAudio) View.VISIBLE else View.GONE
-        binding.tiltOverlay.visibility = if (showTilt) View.VISIBLE else View.GONE
+        binding.rotationOverlay.visibility = if (showRotation) View.VISIBLE else View.GONE
         binding.uploadSpeedOverlay.visibility = if (showUploadSpeed) View.VISIBLE else View.GONE
     }
 
@@ -820,7 +820,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             viewModel.isTryingConnectionLiveData.value == true -> getString(R.string.connecting)
             else -> getString(R.string.offline)
         }
-        binding.statusTextView.text = getString(R.string.status_format, typeText, statusText)
+        val fullStatus = getString(R.string.status_format, typeText, statusText)
+        binding.uploadSpeedOverlay.updateStatus(fullStatus)
     }
 
     private fun startPersistentService() {
@@ -841,6 +842,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
             binding.audioLevelOverlay.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 this.topMargin = topMargin + 2.dpToPx()
+                marginStart = 40.dpToPx()
             }
 
             binding.cameraControls.updateLayoutParams<ViewGroup.MarginLayoutParams> {
@@ -1395,60 +1397,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         startActivity(Intent(this, KnownIssuesActivity::class.java))
     }
 
-    private fun showPiPSettingsDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_pip_settings, null)
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setPositiveButton("確定", null)
-            .create()
-
-        val pipEnableSwitch = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.pipEnableSwitch)
-        val pipPositionGrid = dialogView.findViewById<android.widget.GridLayout>(R.id.pipPositionGrid)
-        val pipPaddingSeekBar = dialogView.findViewById<android.widget.SeekBar>(R.id.pipPaddingSeekBar)
-        val pipPaddingValue = dialogView.findViewById<android.widget.TextView>(R.id.pipPaddingValue)
-        val pipRoundedSwitch = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.pipRoundedSwitch)
-
-        // Initialize state
-        pipEnableSwitch.isChecked = viewModel.isPipEnabled.value ?: false
-        pipRoundedSwitch.isChecked = viewModel.pipRounded.value ?: false
-        
-        val currentPadding = viewModel.pipPadding.value ?: 0
-        pipPaddingSeekBar.progress = currentPadding / 10
-        pipPaddingValue.text = currentPadding.toString()
-
-        pipPaddingSeekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: android.widget.SeekBar?, progress: Int, fromUser: Boolean) {
-                val padding = progress * 10
-                pipPaddingValue.text = padding.toString()
-                viewModel.setPipPadding(padding)
-            }
-            override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
-        })
-
-        pipRoundedSwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setPipRounded(isChecked)
-        }
-        
-        val currentPos = viewModel.pipPosition.value ?: 8
-        for (i in 0 until pipPositionGrid.childCount) {
-            val child = pipPositionGrid.getChildAt(i) as android.widget.ToggleButton
-            child.isChecked = (i == currentPos)
-            child.setOnClickListener {
-                for (j in 0 until pipPositionGrid.childCount) {
-                    (pipPositionGrid.getChildAt(j) as android.widget.ToggleButton).isChecked = (i == j)
-                }
-                viewModel.setPipPosition(i)
-            }
-        }
-
-        pipEnableSwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setPipEnabled(isChecked)
-        }
-
-        dialog.show()
-    }
-
     // ---------- 沉浸模式控制 ----------
     private fun enterImmersiveMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -1705,7 +1653,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun hideAllButtons() {
         // 隱藏右上角按鈕容器
         binding.uploadSpeedOverlay.visibility = View.GONE
-        binding.tiltOverlay.visibility = View.GONE
+        binding.rotationOverlay.visibility = View.GONE
         binding.topRightButtonContainer.visibility = View.GONE
         binding.batteryOverlay.visibility = View.GONE
         binding.shakeLevelOverlay.visibility = View.GONE
@@ -1794,7 +1742,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         // 隱藏訊號強度 Overlay
         binding.networkSignalOverlay.visibility = View.GONE
 
-        binding.statusTextView.visibility = View.INVISIBLE
         binding.audioLevelOverlay.visibility = View.GONE
     }
 
@@ -1892,7 +1839,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
 
         // 網路訊號與電池 Overlay 將由 updateOverlayVisibility 統一處理
-        binding.statusTextView.visibility = View.VISIBLE
         binding.audioLevelOverlay.visibility = View.VISIBLE
         // 監聽 ViewModel 的數據更新，同步給 Overlay
         // 恢復 Overlay 可見性（根據偏好設定）
@@ -1953,7 +1899,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
         binding.menuItemPiP.setOnClickListener {
             hideCustomMenu()
-            showPiPSettingsDialog()
+            showSidePanel(PipSettingsFragment())
         }
         binding.menuItemSettings.setOnClickListener { 
             hideCustomMenu()

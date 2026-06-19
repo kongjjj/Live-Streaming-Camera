@@ -119,6 +119,15 @@ class MyPersistentService : Service() {
 
     private fun buildNotification(): Notification {
 
+        // 點擊通知主體回主程式
+        val contentIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val contentPendingIntent = PendingIntent.getActivity(
+            this, 0, contentIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         // 開始/停止直播按鈕
         val streamAction = if (isStreaming) ACTION_STOP_STREAM else ACTION_START_STREAM
         val streamLabel = if (isStreaming) "停止直播" else "開始直播"
@@ -146,6 +155,7 @@ class MyPersistentService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(isStreaming)      // 直播中持續顯示
             .setAutoCancel(false)
+            .setContentIntent(contentPendingIntent)
             .addAction(android.R.drawable.ic_media_play, streamLabel, streamPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "關閉", stopPendingIntent)
             .build()

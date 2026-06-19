@@ -4,11 +4,18 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +44,14 @@ class SettingsActivity : AppCompatActivity() {
                 preferenceManager.sharedPreferences?.edit()?.putString(prefKey, it.toString())?.apply()
                 findPreference<Preference>(prefKey)?.summary = it.path
             }
+        }
+
+        private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+            uri?.let { exportSettings(it) }
+        }
+
+        private val importLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            uri?.let { importSettings(it) }
         }
 
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -87,6 +102,82 @@ class SettingsActivity : AppCompatActivity() {
                     context.stopService(intent)
                 }
                 true
+            }
+
+            findPreference<Preference>("export_settings")?.setOnPreferenceClickListener {
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                exportLauncher.launch("livestream_settings_$timestamp.bak")
+                true
+            }
+
+            findPreference<Preference>("import_settings")?.setOnPreferenceClickListener {
+                importLauncher.launch(arrayOf("application/octet-stream", "*/*"))
+                true
+            }
+        }
+
+        private fun exportSettings(uri: Uri) {
+            try {
+                val prefs = preferenceManager.sharedPreferences
+                val allEntries = prefs?.all ?: return
+                val jsonObject = JSONObject()
+                for ((key, value) in allEntries) {
+                    jsonObject.put(key, value)
+                }
+
+                requireContext().contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(jsonObject.toString(4).toByteArray())
+                }
+                Toast.makeText(requireContext(), "設定已匯出", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(requireContext(), "匯出失敗: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        private fun importSettings(uri: Uri) {
+            try {
+                val context = requireContext()
+                val stringBuilder = StringBuilder()
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            stringBuilder.append(line)
+                        }
+                    }
+                }
+
+                val jsonObject = JSONObject(stringBuilder.toString())
+                val prefs = preferenceManager.sharedPreferences ?: return
+                val editor = prefs.edit()
+                editor.clear() // 清除目前所有設定
+
+                val keys = jsonObject.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val value = jsonObject.get(key)
+                    when (value) {
+                        is Boolean -> editor.putBoolean(key, value)
+                        is Float -> editor.putFloat(key, value)
+                        is Int -> editor.putInt(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is String -> editor.putString(key, value)
+                    }
+                }
+                editor.commit()
+
+                androidx.appcompat.app.AlertDialog.Builder(context)
+                    .setTitle("匯入成功")
+                    .setMessage("設定已匯入，程式將重新啟動以套用設定。")
+                    .setCancelable(false)
+                    .setPositiveButton("確定") { _, _ ->
+                        restartApp()
+                    }
+                    .show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(requireContext(), "匯入失敗: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
 
