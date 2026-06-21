@@ -191,11 +191,16 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
         }
     }
-    private val streamerRequiredPermissions =
-        listOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
-        )
+    private val streamerRequiredPermissions = mutableListOf(
+        Manifest.permission.CAMERA,
+        Manifest.permission.RECORD_AUDIO,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.READ_PHONE_STATE
+    ).apply {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     private val permissionsManager = PermissionsManager(
         this,
@@ -203,29 +208,30 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         onAllGranted = { onPermissionsGranted() },
         onShowPermissionRationale = { permissions, onRequiredPermissionLastTime ->
             showDialog(
-                title = "權限被拒絕",
-                message = "需要授予 $permissions 權限才能推流",
+                title = "權限說明",
+                message = "需要授予相機與錄音權限才能推流，位置與電話狀態權限則用於顯示訊號強度。",
                 positiveButtonText = R.string.accept,
                 onPositiveButtonClick = { onRequiredPermissionLastTime() },
                 negativeButtonText = R.string.denied
             )
         },
-        onDenied = {
-            showDialog(
-                "權限被拒絕",
-                "您需要授予所有權限才能推流",
-                positiveButtonText = 0,
-                negativeButtonText = 0
-            )
+        onDenied = { deniedPermissions ->
+            // 如果關鍵權限被拒絕，則顯示提示
+            val criticalPermissions = listOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+            if (deniedPermissions.any { it in criticalPermissions }) {
+                showDialog(
+                    "權限被拒絕",
+                    "您需要授予相機與錄音權限才能推流",
+                    positiveButtonText = 0,
+                    negativeButtonText = 0
+                )
+            } else {
+                // 如果只有非關鍵權限（如訊號強度）被拒絕，則繼續進入主流程
+                onPermissionsGranted()
+                toast("部分權限未授予，訊號強度或通知顯示可能不完整")
+            }
         })
 
-    // 通知權限請求（Android 13+）
-    private val requestNotificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) Log.d(TAG, "通知權限已授予")
-        else Log.w(TAG, "通知權限被拒絕")
-    }
 
     // 藍牙權限請求（Android 12+）
     private val requestBluetoothPermissionLauncher = registerForActivityResult(
@@ -239,15 +245,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
     private val showShakeLevelKey = "show_shake_level"
-    // 訊號強度權限請求（位置與電話狀態）
-    private val requestSignalPermissionsLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val allGranted = permissions.values.all { it }
-        if (!allGranted) {
-            toast("部分權限未授予，訊號強度顯示可能不完整")
-        }
-    }
 
     // 音量條相關
     private lateinit var audioLevelFlow: AudioLevelFlow
@@ -319,7 +316,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             startPersistentService()
         }
 
-        requestNotificationPermission()
+        // 移除獨立的通知權限請求，已整合至 permissionsManager
+        // requestNotificationPermission()
         prefs.registerOnSharedPreferenceChangeListener(this)
 // 註冊服務命令接收器
         val filter = IntentFilter().apply {
@@ -354,20 +352,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             enterImmersiveMode()
         } else {
             exitImmersiveMode()
-        }
-    }
-    private fun requestSignalPermissions() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val permissionsToRequest = mutableListOf<String>()
-            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.ACCESS_FINE_LOCATION)
-            }
-            if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(Manifest.permission.READ_PHONE_STATE)
-            }
-            if (permissionsToRequest.isNotEmpty()) {
-                requestSignalPermissionsLauncher.launch(permissionsToRequest.toTypedArray())
-            }
         }
     }
 
@@ -804,17 +788,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 
-    private fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
 
     private fun updateStatusText() {
         val endpointType = prefs.getString(endpointTypeKey, "rtmp") ?: "rtmp"
-        val typeText = if (endpointType == "srt") getString(R.string.srt) else getString(R.string.rtmp)
+        val urlIndex = if (endpointType == "srt") {
+            prefs.getString("selected_srt_url", "1") ?: "1"
+        } else {
+            prefs.getString("selected_rtmp_url", "1") ?: "1"
+        }
+        val typeText = if (endpointType == "srt") "SRT $urlIndex" else "RTMP $urlIndex"
         val statusText = when {
             viewModel.isStreamingLiveData.value == true -> getString(R.string.streaming)
             viewModel.isTryingConnectionLiveData.value == true -> getString(R.string.connecting)
