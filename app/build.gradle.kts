@@ -12,8 +12,8 @@ android {
         applicationId = "com.kongjjj.livestreamingcamera"
         minSdk = 24
         targetSdk = 36
-        versionCode = 80
-        versionName = "2.6.1"
+        versionCode = 81
+        versionName = "2.6.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -64,10 +64,10 @@ dependencies {
     implementation(libs.concurrent.futures)
     implementation(libs.guava)
     
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.0.0")
+    implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
     implementation("androidx.documentfile:documentfile:1.1.0")
     
     testImplementation(libs.junit)
