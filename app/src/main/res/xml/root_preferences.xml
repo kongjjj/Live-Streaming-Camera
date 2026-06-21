@@ -244,12 +244,6 @@
 
         <SwitchPreference
             app:defaultValue="false"
-            app:key="hide_status_bar"
-            app:title="隱藏狀態欄"
-            app:summary="開啟後將自動隱藏手機通知欄（狀態欄），觸碰螢幕可暫時喚出" />
-
-        <SwitchPreference
-            app:defaultValue="false"
             app:key="show_upload_speed_overlay"
             app:title="顯示上傳速度"
             app:summary="即時顯示網路的上傳速率 (kb/s)" />
@@ -271,11 +265,17 @@
             app:key="show_audio_level"
             app:title="顯示音量條"
             app:summary="即時顯示麥克風收音音量" />
+
+        <SwitchPreference
+            app:defaultValue="true"
+            app:key="hide_status_bar"
+            app:title="隱藏狀態欄"
+            app:summary="開啟後將自動隱藏手機通知欄（狀態欄），觸碰螢幕可暫時喚出" />
     </PreferenceCategory>
     <!-- 背景服務設定區塊 -->
     <PreferenceCategory app:title="背景運行">
         <SwitchPreference
-            app:defaultValue="false"
+            app:defaultValue="true"
             app:key="background_service_enabled"
             app:title="常駐背景服務"
             app:summary="開啟後應用將在背景持續運行，通知欄會顯示圖示" />

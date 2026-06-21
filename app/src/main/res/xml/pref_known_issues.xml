@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.2">
+        <Preference
+            android:selectable="false"
+            android:title="修改上傳速度 Overlay，如直播正使用SRT完整URL 1, 就顯示SRT 1 直播中。"
+            android:summary=" " />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.1">
         <Preference
             android:selectable="false"
