@@ -66,9 +66,22 @@ class NetworkSignalOverlay @JvmOverloads constructor(
 
     @Suppress("DEPRECATION")
     private fun updateSignalStrengths() {
-        val wifiInfo = wifiManager.connectionInfo
-        wifiLevel = if (wifiInfo.networkId != -1) WifiManager.calculateSignalLevel(wifiInfo.rssi, 5) else 0
+        // Wi-Fi
+        val network = connectivityManager.activeNetwork
+        val capabilities = connectivityManager.getNetworkCapabilities(network)
+        if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
+            val wifiInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                capabilities.transportInfo as? android.net.wifi.WifiInfo
+            } else {
+                wifiManager.connectionInfo
+            }
+            val rssi = wifiInfo?.rssi ?: wifiManager.connectionInfo.rssi
+            wifiLevel = if (rssi != -127) WifiManager.calculateSignalLevel(rssi, 5) else 0
+        } else {
+            wifiLevel = 0
+        }
 
+        // Cellular
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED ||
             ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             sim1Level = -1
