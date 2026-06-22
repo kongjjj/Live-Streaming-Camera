@@ -60,16 +60,16 @@ class EffectShaderProvider : ShaderProvider {
                     finalColor.b = (r * 0.272) + (g * 0.534) + (b * 0.131);
                 }
 
-                // 1. 模糊 (9x9 均值模糊)
+                // 1. 模糊 (5x5 均值模糊 - 從 9x9 簡化以節省 GPU)
                 if (uBlur == 1) {
-                    float offset = 0.002; // 縮小偏移量以適應更多採樣點，避免畫面過於破碎
+                    float offset = 0.003; 
                     vec3 blurColor = vec3(0.0);
-                    for (int i = -4; i <= 4; i++) {
-                        for (int j = -4; j <= 4; j++) {
+                    for (int i = -2; i <= 2; i++) {
+                        for (int j = -2; j <= 2; j++) {
                             blurColor += texture2D($samplerVarName, $fragCoordsVarName + vec2(float(i) * offset, float(j) * offset)).rgb;
                         }
                     }
-                    finalColor = blurColor / 81.0;
+                    finalColor = blurColor / 25.0;
                 }
 
                 // 2. 美顏 (簡單平滑處理 - 這裡使用稍微亮化與減少對比的簡單模擬)

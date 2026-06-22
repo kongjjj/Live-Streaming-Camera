@@ -42,6 +42,7 @@ class EffectSurfaceProcessor(
     private val surfaceOutputMatrix = FloatArray(16)
 
     private val surfaceOutputs: MutableList<ISurfaceOutput> = mutableListOf()
+    private val filteredSurfaceOutputs = mutableListOf<SurfaceOutput>()
     private val surfaceInputs: MutableList<SurfaceInput> = mutableListOf()
     private val surfaceInputsToTimeConverterMap: MutableMap<SurfaceTexture, VideoTimebaseConverter> =
         hashMapOf()
@@ -191,6 +192,9 @@ class EffectSurfaceProcessor(
             if (surfaceOutputs.none { it.targetSurface == surfaceOutput.targetSurface }) {
                 renderer.registerOutputSurface(surfaceOutput.targetSurface)
                 surfaceOutputs.add(surfaceOutput)
+                if (surfaceOutput is SurfaceOutput) {
+                    filteredSurfaceOutputs.add(surfaceOutput)
+                }
             }
         }
     }
@@ -202,6 +206,9 @@ class EffectSurfaceProcessor(
             if (surfaceOutputs.contains(surfaceOutput)) {
                 renderer.unregisterOutputSurface(surfaceOutput.targetSurface)
                 surfaceOutputs.remove(surfaceOutput)
+                if (surfaceOutput is SurfaceOutput) {
+                    filteredSurfaceOutputs.remove(surfaceOutput)
+                }
             }
         }
     }
@@ -214,6 +221,9 @@ class EffectSurfaceProcessor(
             if (surfaceOutput != null) {
                 renderer.unregisterOutputSurface(surfaceOutput.targetSurface)
                 surfaceOutputs.remove(surfaceOutput)
+                if (surfaceOutput is SurfaceOutput) {
+                    filteredSurfaceOutputs.remove(surfaceOutput)
+                }
                 surfaceToEffectsMap.remove(surface)
             }
         }
@@ -225,6 +235,7 @@ class EffectSurfaceProcessor(
         executeSafely {
             surfaceOutputs.forEach { renderer.unregisterOutputSurface(it.targetSurface) }
             surfaceOutputs.clear()
+            filteredSurfaceOutputs.clear()
         }
     }
 
@@ -306,7 +317,7 @@ class EffectSurfaceProcessor(
         }
 
         // 2. 渲染到各個輸出 Surface
-        surfaceOutputs.filterIsInstance<SurfaceOutput>().forEach { output ->
+        filteredSurfaceOutputs.forEach { output ->
             try {
                 output.updateTransformMatrix(surfaceOutputMatrix, textureMatrix)
                 if (output.isStreaming()) {
@@ -339,27 +350,44 @@ class EffectSurfaceProcessor(
         return textureId
     }
 
+    private var currentProgram = -1
+    private val uniformLocations = mutableMapOf<Int, MutableMap<String, Int>>()
+
+    private fun getUniformLocation(program: Int, name: String): Int {
+        val programUniforms = uniformLocations.getOrPut(program) { mutableMapOf() }
+        return programUniforms.getOrPut(name) {
+            GLES20.glGetUniformLocation(program, name)
+        }
+    }
+
     private fun setEffectUniforms(enabled: Boolean) {
         val programArr = IntArray(1)
         GLES20.glGetIntegerv(GLES20.GL_CURRENT_PROGRAM, programArr, 0)
-        val currentProgram = programArr[0]
-        if (currentProgram > 0) {
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uGrayscale"), if (enabled && isGrayscale) 1 else 0)
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uBeauty"), if (enabled && isBeauty) 1 else 0)
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uBlur"), if (enabled && isBlur) 1 else 0)
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uMosaic"), if (enabled && isMosaic) 1 else 0)
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uSepia"), if (enabled && isSepia) 1 else 0)
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uSplitThree"), if (enabled && isSplitThree) 1 else 0)
+        val activeProgram = programArr[0]
+        if (activeProgram > 0) {
+            if (currentProgram != activeProgram) {
+                currentProgram = activeProgram
+            }
 
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uPipEnabled"), if (enabled && isPipEnabled) 1 else 0)
-            GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uPipRounded"), if (enabled && isPipRounded) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uGrayscale"), if (enabled && isGrayscale) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uBeauty"), if (enabled && isBeauty) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uBlur"), if (enabled && isBlur) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uMosaic"), if (enabled && isMosaic) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uSepia"), if (enabled && isSepia) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uSplitThree"), if (enabled && isSplitThree) 1 else 0)
+
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uPipEnabled"), if (enabled && isPipEnabled) 1 else 0)
+            GLES20.glUniform1i(getUniformLocation(activeProgram, "uPipRounded"), if (enabled && isPipRounded) 1 else 0)
             if (enabled && isPipEnabled) {
                 GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
                 GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, pipTextureId)
-                GLES20.glUniform1i(GLES20.glGetUniformLocation(currentProgram, "uPipSampler"), 1)
-                GLES20.glUniform2fv(GLES20.glGetUniformLocation(currentProgram, "uPipPosition"), 1, pipPosition, 0)
-                GLES20.glUniform2fv(GLES20.glGetUniformLocation(currentProgram, "uPipSize"), 1, pipSize, 0)
-                GLES20.glUniform2f(GLES20.glGetUniformLocation(currentProgram, "uScreenResolution"), inputSurfaceSize.width.toFloat(), inputSurfaceSize.height.toFloat())
+                GLES20.glUniform1i(getUniformLocation(activeProgram, "uPipSampler"), 1)
+                GLES20.glUniform2fv(getUniformLocation(activeProgram, "uPipPosition"), 1, pipPosition, 0)
+                GLES20.glUniform2fv(getUniformLocation(activeProgram, "uPipSize"), 1, pipSize, 0)
+                GLES20.glUniform2f(getUniformLocation(activeProgram, "uScreenResolution"), inputSurfaceSize.width.toFloat(), inputSurfaceSize.height.toFloat())
+                GLES20.glUniform1f(getUniformLocation(activeProgram, "uAlphaScale"), 1.0f)
+            } else {
+                GLES20.glUniform1f(getUniformLocation(activeProgram, "uAlphaScale"), 1.0f)
             }
         }
     }
