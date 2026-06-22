@@ -141,6 +141,31 @@ class MainViewModel(
     private var lastTxBytes: Long = 0
     private var lastStatsTime: Long = 0
 
+    // 快取反射物件以優化效能
+    private var srtMetricsClass: Class<*>? = null
+    private val srtMetricsMethods = mutableMapOf<String, java.lang.reflect.Method?>()
+    private val srtMetricsFields = mutableMapOf<String, java.lang.reflect.Field>()
+
+    private fun getSrtMetricValue(metrics: Any, name: String): Any? {
+        val cls = srtMetricsClass ?: metrics.javaClass.also { srtMetricsClass = it }
+        return try {
+            val getterName = "get${name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }}"
+            val method = srtMetricsMethods.getOrPut(getterName) {
+                try { cls.getMethod(getterName) } catch (_: Exception) { null }
+            }
+            if (method != null) {
+                method.invoke(metrics)
+            } else {
+                val field = srtMetricsFields.getOrPut(name) {
+                    cls.getField(name)
+                }
+                field.get(metrics)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     enum class FlashMode { ON, OFF }
     enum class WhiteBalanceMode { AUTO, INCANDESCENT, FLUORESCENT, DAYLIGHT, CLOUDY }
     enum class FocusMode { AUTO, CONTINUOUS, MACRO }
@@ -326,12 +351,11 @@ class MainViewModel(
 
                     val stats = if (endpointType == "srt" && metrics != null) {
                         try {
-                            // 優先嘗試直接讀取欄位或 getter
-                            val cls = metrics.javaClass
-                            val msRTT = try { cls.getMethod("getMsRTT").invoke(metrics) as Long } catch (_: Exception) { cls.getField("msRTT").get(metrics) as Long }
-                            val pktSndLoss = try { cls.getMethod("getPktSndLoss").invoke(metrics) as Long } catch (_: Exception) { cls.getField("pktSndLoss").get(metrics) as Long }
-                            val pktSent = try { cls.getMethod("getPktSent").invoke(metrics) as Long } catch (_: Exception) { cls.getField("pktSent").get(metrics) as Long }
-                            val mbpsSendRate = try { cls.getMethod("getMbpsSendRate").invoke(metrics) as Double } catch (_: Exception) { cls.getField("mbpsSendRate").get(metrics) as Double }
+                            // 使用快取的反射工具獲取欄位值
+                            val msRTT = (getSrtMetricValue(metrics, "msRTT") as? Number)?.toLong() ?: 0L
+                            val pktSndLoss = (getSrtMetricValue(metrics, "pktSndLoss") as? Number)?.toLong() ?: 0L
+                            val pktSent = (getSrtMetricValue(metrics, "pktSent") as? Number)?.toLong() ?: 0L
+                            val mbpsSendRate = (getSrtMetricValue(metrics, "mbpsSendRate") as? Number)?.toDouble() ?: 0.0
 
                             val loss = if (pktSent > 0) (pktSndLoss.toFloat() / pktSent) * 100 else 0f
                             StreamStats(
