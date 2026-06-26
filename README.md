@@ -38,4 +38,4 @@
 ## 安裝方法
 我會在 [GitHub releases](https://github.com/kongjjj/Live-Streaming-Camera/releases) 內發布最新 .apk 檔案。
 
-可以在手機上開啟 GitHub 發行頁面，下載 .apk 檔案並安裝。
+可以在手機上開啟 GitHub 發行頁面，下載 .apk 檔案並安裝。 
