@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- PreviewView -->
+    <io.github.thibaultbee.streampack.ui.views.PreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 一開三輔助線 Overlay -->
+    <com.kongjjj.livestreamingcamera.ui.SplitThreeOverlay
+        android:id="@+id/splitThreeOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 聊天列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/chatRecyclerView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="100dp"
+        android:layout_marginBottom="10dp"
+        android:background="@android:color/transparent"
+        android:clipToPadding="false"
+        android:padding="16dp"
+        android:scrollbars="none"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/cameraButtonsContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.45" />
+
+    <!-- 垂直參考線 (50%) -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_vertical_50"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.5" />
+
+    <!-- 設置面板容器 (右側一半) -->
+    <FrameLayout
+        android:id="@+id/settingsContainer"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="?android:attr/windowBackground"
+        android:visibility="gone"
+        android:elevation="50dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/guideline_vertical_50"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <!-- 底部關閉按鈕 -->
+        <Button
+            android:id="@+id/bottomCloseSettingsButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="16dp"
+            android:text="關閉" />
+    </FrameLayout>
+
+    <!-- 左下角後置鏡頭按鈕列（固定位置，不滾動） -->
+    <LinearLayout
+        android:id="@+id/cameraButtonsContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/cameraControls"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="5dp" />
+
+    <!-- 手震顯示條 -->
+    <com.kongjjj.livestreamingcamera.ui.ShakeLevelOverlay
+        android:id="@+id/shakeLevelOverlay"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginStart="40dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- 旋轉角度 Overlay -->
+    <com.kongjjj.livestreamingcamera.ui.RotationOverlay
+        android:id="@+id/rotationOverlay"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginStart="40dp"
+        android:elevation="10dp"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/shakeLevelOverlay" />
+
+    <!-- 音量條 -->
+    <com.kongjjj.livestreamingcamera.ui.components.AudioLevelOverlay
+        android:id="@+id/audioLevelOverlay"
+        android:layout_width="120dp"
+        android:layout_height="12dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginTop="15dp"
+        android:elevation="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/rotationOverlay" />
+
+    <!-- 上傳速度 Overlay -->
+    <com.kongjjj.livestreamingcamera.ui.components.UploadSpeedOverlay
+        android:id="@+id/uploadSpeedOverlay"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="0dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@+id/networkSignalOverlay"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.kongjjj.livestreamingcamera.ui.NetworkSignalOverlay
+        android:id="@+id/networkSignalOverlay"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="0dp"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/batteryOverlay" />
+
+    <!-- 電池 Overlay 頂部對齊 -->
+    <com.kongjjj.livestreamingcamera.ui.BatteryOverlay
+        android:id="@+id/batteryOverlay"
+        android:layout_width="40dp"
+        android:layout_height="77dp"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="0dp"
+        app:layout_constraintEnd_toStartOf="@+id/topRightButtonContainer"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 右上角按鈕容器 -->
+    <LinearLayout
+        android:id="@+id/topRightButtonContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="0dp"
+        android:elevation="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" >
+
+
+        <ImageButton
+            android:id="@+id/menuButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginTop="15dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_menu"
+            android:contentDescription="@string/menu_button_desc"
+            android:layout_marginBottom="4dp" />
+
+        <!-- 聊天開關按鈕 -->
+        <ImageButton
+            android:id="@+id/chatButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_chat_on"
+            android:contentDescription="@string/chat_switch_desc"
+            android:layout_marginBottom="4dp" />
+
+        <!-- 錄影按鈕 -->
+        <ImageButton
+            android:id="@+id/recordButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_recorder_start"
+            android:contentDescription="錄影"
+            android:layout_marginBottom="4dp" />
+
+
+    </LinearLayout>
+
+    <!-- 自定義選單遮罩 (點擊外部關閉) -->
+    <View
+        android:id="@+id/customMenuScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:background="@android:color/transparent"
+        android:elevation="90dp" />
+
+    <!-- 自定義選單面板 -->
+    <LinearLayout
+        android:id="@+id/customMenuPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/background_menu_bg"
+        android:padding="4dp"
+        android:visibility="gone"
+        android:elevation="100dp"
+        android:layout_marginEnd="8dp"
+        app:layout_constraintTop_toTopOf="@+id/topRightButtonContainer"
+        app:layout_constraintEnd_toStartOf="@+id/topRightButtonContainer">
+
+        <TextView
+            android:id="@+id/menuItemChatSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="聊天室設定　"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/menuItemPiP"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="PiP 設定　　"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/menuItemSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="設定　　　　"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/menuItemVersion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="版本資訊　　"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+        <TextView
+            android:id="@+id/menuItemIssues"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:text="更新及問題　"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="16sp"
+            android:background="?attr/selectableItemBackground" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/blackOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FF000000"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- 右下角隱藏按鈕容器 (垂直排列選單) -->
+    <LinearLayout
+        android:id="@+id/hiddenMenusContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="4dp"
+        android:elevation="10dp"
+        android:orientation="vertical"
+        android:gravity="end"
+        app:layout_constraintBottom_toTopOf="@+id/cameraControls"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 曝光拉杆容器 -->
+        <LinearLayout
+            android:id="@+id/exposureSliderContainer"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/slider_bg"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/exposureValueText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="曝光: 0"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/exposureSlider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="-3.0"
+                android:valueTo="3.0"
+                android:stepSize="1.0"
+                app:labelBehavior="gone"
+                app:tickVisible="true"
+                app:thumbColor="@color/tiffany_blue"
+                app:trackColorActive="@color/tiffany_blue"
+                app:trackColorInactive="#4081D8D0"
+                app:tickColorActive="@color/tiffany_blue"
+                app:tickColorInactive="#8081D8D0"
+                app:trackHeight="4dp" />
+        </LinearLayout>
+
+        <!-- 變焦拉杆容器 -->
+        <LinearLayout
+            android:id="@+id/zoomSliderContainer"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/slider_bg"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/zoomValueText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:text="變焦: 1.0x"
+                android:textColor="@color/white"
+                android:textSize="10sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/zoomSlider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="1.0"
+                android:valueTo="10.0"
+                android:stepSize="0.1"
+                app:labelBehavior="gone"
+                app:thumbColor="@color/tiffany_blue"
+                app:trackColorActive="@color/tiffany_blue"
+                app:trackColorInactive="#4081D8D0"
+                app:trackHeight="4dp" />
+        </LinearLayout>
+
+        <!-- 隱藏特效按鈕列 -->
+        <LinearLayout
+            android:id="@+id/hiddenEffectControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <!-- 馬賽克按鈕 -->
+            <ImageButton
+                android:id="@+id/mosaicButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_mosaic"
+                android:contentDescription="@string/mosaic_desc" />
+
+            <!-- 復古按鈕 -->
+            <ImageButton
+                android:id="@+id/sepiaButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_sepia"
+                android:contentDescription="@string/sepia_desc" />
+
+            <!-- 模糊按鈕 -->
+            <ImageButton
+                android:id="@+id/blurButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_blur"
+                android:contentDescription="@string/blur_desc" />
+
+            <!-- 美顏按鈕 -->
+            <ImageButton
+                android:id="@+id/beautyButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_face_retouching"
+                android:contentDescription="@string/beauty_desc" />
+
+            <!-- 黑白按鈕 -->
+            <ImageButton
+                android:id="@+id/grayscaleButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_filter_b_and_w"
+                android:contentDescription="@string/grayscale_desc" />
+
+            <!-- 一開三按鈕 -->
+            <ImageButton
+                android:id="@+id/splitThreeButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_split_three"
+                android:contentDescription="一開三鏡頭" />
+
+        </LinearLayout>
+
+        <!-- 右下角相機控制按鈕群 -->
+        <LinearLayout
+            android:id="@+id/hiddenCameraControls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <!-- 閃光燈按鈕 -->
+            <ImageButton
+                android:id="@+id/flashButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:contentDescription="@string/flash_desc"
+                android:src="@drawable/ic_flash_auto" />
+
+            <!-- 切換鏡頭按鈕 -->
+            <ImageButton
+                android:id="@+id/switchCameraButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_switch_camera"
+                android:contentDescription="@string/switch_camera_desc" />
+
+            <!-- 白平衡按鈕 -->
+            <ImageButton
+                android:id="@+id/whiteBalanceButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:contentDescription="@string/white_balance_desc"
+                android:src="@drawable/ic_white_balance" />
+
+            <!-- 曝光補償按鈕 -->
+            <ImageButton
+                android:id="@+id/exposureButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:contentDescription="@string/exposure_desc"
+                android:src="@drawable/ic_exposure" />
+
+            <!-- 對焦模式按鈕 -->
+            <ImageButton
+                android:id="@+id/focusButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:contentDescription="@string/focus_desc"
+                android:src="@drawable/ic_focus_auto" />
+
+            <!-- 變焦按鈕 -->
+            <ImageButton
+                android:id="@+id/zoomButton"
+                android:layout_width="45dp"
+                android:layout_height="45dp"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/control_button_bg"
+                android:src="@drawable/ic_zoom"
+                android:contentDescription="變焦" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/cameraControls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="5dp"
+        android:elevation="10dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- 觀看人數容器（置於直播按鈕左側） -->
+        <LinearLayout
+            android:id="@+id/viewerCountLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="45dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_gravity="bottom"
+            android:layout_marginEnd="4dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/viewerIcon"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_person"
+                android:contentDescription="@string/viewer_icon_desc"
+                app:tint="@android:color/white" />
+
+            <TextView
+                android:id="@+id/viewerCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/viewer_count_default"
+                android:textSize="14sp"
+                android:textColor="@android:color/white"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+
+        <!-- 直播時長顯示 -->
+        <TextView
+            android:id="@+id/uptimeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00:00"
+            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:layout_marginStart="8dp"
+            android:visibility="gone" />
+
+        <!-- 直播按鈕 (新位置，統一大小為45dp) -->
+        <ToggleButton
+            android:id="@+id/liveButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/ic_live_button_selector"
+            android:gravity="center"
+            android:padding="0dp"
+            android:textOff=""
+            android:textOn=""
+            android:contentDescription="@string/live_button_desc" />
+
+        <!-- 靜音按鈕 -->
+        <ImageButton
+            android:id="@+id/muteButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="@string/mute_desc"
+            android:src="@drawable/ic_mute_off" />
+
+        <!-- 藍牙開關按鈕 -->
+        <ImageButton
+            android:id="@+id/bluetoothButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:src="@drawable/ic_bluetooth_off"
+            android:contentDescription="藍牙麥克風開關" />
+
+        <!-- 特效按鈕 (開啟/關閉特效選單) -->
+        <ImageButton
+            android:id="@+id/effectsMenuButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="@string/effects_desc"
+            android:src="@drawable/ic_auto_awesome" />
+
+        <!-- 相機設定按鈕 (展開/收合) -->
+        <ImageButton
+            android:id="@+id/cameraSettingButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="相機設定"
+            android:src="@drawable/ic_camera_set" />
+
+        <!-- 黑色畫面按鈕 -->
+        <ImageButton
+            android:id="@+id/blackScreenButton"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_marginStart="4dp"
+            android:background="@drawable/control_button_bg"
+            android:contentDescription="@string/black_screen_desc"
+            android:src="@drawable/ic_light" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
