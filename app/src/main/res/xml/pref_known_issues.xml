@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.4">
+        <Preference
+            android:selectable="false"
+            android:title="修正橫向直播輸出, 現在只有橫向不會再意外直向變形。"
+            android:summary="修正暗黑模式時部份介面顯示錯誤。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.3">
         <Preference
             android:selectable="false"
