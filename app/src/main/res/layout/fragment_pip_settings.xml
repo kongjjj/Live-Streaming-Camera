@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
+    android:background="?android:attr/windowBackground"
     android:paddingTop="10dp"
     android:paddingRight="50dp"
     android:clipToPadding="false">
@@ -19,8 +19,7 @@
             android:text="@string/pip_settings_title"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:layout_marginBottom="12dp"
-            android:textColor="@android:color/black" />
+            android:layout_marginBottom="12dp" />
 
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/pipEnableSwitch"
@@ -28,16 +27,14 @@
             android:layout_height="wrap_content"
             android:text="@string/enable_pip"
             android:textSize="14sp"
-            android:layout_marginBottom="12dp"
-            android:textColor="@android:color/black" />
+            android:layout_marginBottom="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/pip_position"
             android:textSize="14sp"
-            android:layout_marginBottom="6dp"
-            android:textColor="@android:color/black" />
+            android:layout_marginBottom="6dp" />
 
         <!-- 4x3 Grid (4 columns, 3 rows) -->
         <GridLayout
@@ -73,8 +70,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/pip_padding"
-                android:textSize="14sp"
-                android:textColor="@android:color/black" />
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/pipPaddingValue"
@@ -99,8 +95,7 @@
             android:layout_height="wrap_content"
             android:text="@string/pip_rounded_corners"
             android:textSize="14sp"
-            android:layout_marginBottom="12dp"
-            android:textColor="@android:color/black" />
+            android:layout_marginBottom="12dp" />
 
         <!-- 增加底部空白，避免被關閉按鈕遮擋 -->
         <View
