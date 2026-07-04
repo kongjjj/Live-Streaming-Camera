@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.5">
+        <Preference
+            android:selectable="false"
+            android:title="1.將聊天室連線的彈出通知, 現在轉換成在聊天室中顯示。"
+            android:summary="   " />
+        <Preference
+            android:selectable="false"
+            android:title="2.修復當用手指放大畫面時, 再按下放大按鈕, 程式會閃退。"
+            android:summary="現在用手指直接放大時, 會顯示出放大控制杆。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.4">
         <Preference
             android:selectable="false"
