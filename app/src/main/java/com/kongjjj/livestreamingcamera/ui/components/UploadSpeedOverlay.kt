@@ -37,7 +37,7 @@ class UploadSpeedOverlay @JvmOverloads constructor(
     private val statusPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 26f
-        isFakeBoldText = false
+        isFakeBoldText = true
         setShadowLayer(2f, 1f, 1f, Color.BLACK)
     }
 
