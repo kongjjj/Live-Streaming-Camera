@@ -20,10 +20,13 @@ class BatteryOverlay @JvmOverloads constructor(
         color = Color.WHITE
         textSize = 36f
         isFakeBoldText = true
+        setShadowLayer(2f, 1f, 1f, Color.BLACK)
     }
     private val smallTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textSize = 25f
+        isFakeBoldText = true
+        setShadowLayer(2f, 1f, 1f, Color.BLACK)
     }
 
     private var level = 0

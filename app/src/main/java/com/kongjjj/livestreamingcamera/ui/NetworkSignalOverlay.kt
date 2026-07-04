@@ -26,6 +26,7 @@ class NetworkSignalOverlay @JvmOverloads constructor(
         color = Color.WHITE
         textSize = 22f
         isFakeBoldText = true
+        setShadowLayer(2f, 1f, 1f, Color.BLACK)
     }
     private val indicatorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GREEN
@@ -141,7 +142,7 @@ class NetworkSignalOverlay @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        var currentY = 30f
+        var currentY = 32f
 
         // WiFi
         canvas.drawText("WiFi", 5f, currentY, textPaint)
