@@ -114,6 +114,13 @@ class ChatAdapter(
         } ?: ""
         holder.tvTimestamp.text = timeStr
 
+        if (msg.isSystem) {
+            holder.tvMessage.text = msg.message
+            holder.tvSender.visibility = View.GONE
+            holder.tvMessage.setTextColor(Color.LTGRAY)
+            return
+        }
+
         val senderColor = try {
             msg.color.toColorInt()
         } catch (_: IllegalArgumentException) {
@@ -260,6 +267,8 @@ class ChatAdapter(
         }
 
         if (msg.isSystem) {
+            holder.tvMessage.text = msg.message
+            holder.tvSender.visibility = View.GONE
             holder.tvMessage.setTextColor(Color.LTGRAY)
         } else {
             holder.tvMessage.setTextColor(Color.WHITE)

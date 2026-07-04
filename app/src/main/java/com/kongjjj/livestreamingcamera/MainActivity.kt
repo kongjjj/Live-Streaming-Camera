@@ -76,7 +76,7 @@ import com.kongjjj.livestreamingcamera.getBadgeImageRes
 import com.kongjjj.livestreamingcamera.tts.TTSManager
 
 @SuppressLint("MissingPermission")
-class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
+class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener, io.github.thibaultbee.streampack.ui.views.PreviewView.Listener {
 
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels {
@@ -289,8 +289,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         setupEdgeToEdgeInsets()
         loadChatHistory()
-        initChatSettings()
         setupChat()
+        initChatSettings()
         updateChatShadow()
         updateChatShadowRadius()
         updateChatShadowDistance()
@@ -743,6 +743,28 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.bluetoothButton.setImageResource(icon)
     }
 
+    private fun updateZoomSlider(zoomRatio: Float) {
+        if (zoomRatio.isNaN()) return
+        runOnUiThread {
+            val min = binding.zoomSlider.valueFrom
+            val max = binding.zoomSlider.valueTo
+            val step = binding.zoomSlider.stepSize
+
+            var safeZoom = zoomRatio.coerceIn(min, max)
+            if (step > 0) {
+                val steps = Math.round((safeZoom - min) / step)
+                safeZoom = min + steps * step
+            }
+            // 再次限制範圍，防止浮點數誤差
+            safeZoom = safeZoom.coerceIn(min, max)
+
+            if (binding.zoomSlider.value != safeZoom) {
+                binding.zoomSlider.value = safeZoom
+                binding.zoomValueText.text = String.format(Locale.US, "變焦: %.1fx", safeZoom)
+            }
+        }
+    }
+
     private fun setupZoomButton() {
         binding.zoomButton.setOnClickListener {
             val isVisible = binding.zoomSliderContainer.visibility == View.VISIBLE
@@ -751,11 +773,19 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 // 初始化 Slider 值
                 lifecycleScope.launch {
                     val currentZoom = viewModel.cameraSource?.settings?.zoom?.getZoomRatio() ?: 1.0f
-                    binding.zoomSlider.value = currentZoom.coerceIn(1.0f, 10.0f)
-                    binding.zoomValueText.text = String.format(Locale.US, "變焦: %.1fx", currentZoom)
+                    updateZoomSlider(currentZoom)
                 }
             }
         }
+    }
+
+    override fun onZoomRationOnPinchChanged(zoomRatio: Float) {
+        runOnUiThread {
+            if (binding.zoomSliderContainer.visibility != View.VISIBLE) {
+                binding.zoomSliderContainer.visibility = View.VISIBLE
+            }
+        }
+        updateZoomSlider(zoomRatio)
     }
 
     private fun setupSliders() {
@@ -1080,12 +1110,24 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private fun connectIrc() {
+        if (channel.isBlank() || channel == "yourchannel") {
+            // 如果頻道還沒載入或是預設值，先從偏好設定中嘗試讀取一次
+            channel = prefs.getString(twitchChannelKey, "yourchannel") ?: "yourchannel"
+        }
+        
+        if (channel.isBlank() || channel == "yourchannel") {
+            Log.d(TAG, "頻道名稱尚未設定，跳過連線訊息")
+            return
+        }
+
         webSocket?.cancel()
         webSocket = null
         isWebSocketConnected = false
 
         // 紀錄連線時的頻道名稱，用於後續驗證
         val connectingChannel = channel
+
+        showSystemMessage("正在連線到 $connectingChannel 的聊天室")
 
         val request = Request.Builder().url("wss://irc-ws.chat.twitch.tv:443").build()
         webSocket = httpClient.newWebSocket(request, object : WebSocketListener() {
@@ -1098,7 +1140,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
                 isWebSocketConnected = true
                 stopChatRetry()
-                showSystemMessage("已連線聊天室")
+                showSystemMessage("成功連線到聊天室")
 
                 // 再次確認目前頻道是否與連線時相同，避免舊連線覆蓋新頻道
                 if (channel != connectingChannel) {
@@ -1267,7 +1309,29 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun showSystemMessage(text: String) {
         runOnUiThread {
-            Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+            synchronized(chatMessages) {
+                // 如果最後一條訊息內容相同且是系統訊息，則不再重複添加
+                if (chatMessages.isNotEmpty()) {
+                    val last = chatMessages.last()
+                    if (last.isSystem && last.message == text) {
+                        return@synchronized
+                    }
+                }
+                val msg = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    sender = "System",
+                    message = text,
+                    isSystem = true,
+                    timestamp = System.currentTimeMillis()
+                )
+                chatMessages.add(msg)
+                if (chatMessages.size > 200) {
+                    chatMessages.removeAt(0)
+                }
+            }
+            chatAdapter.submitList(chatMessages.toList()) {
+                binding.chatRecyclerView.scrollToPosition(chatMessages.size - 1)
+            }
         }
     }
 
@@ -1953,6 +2017,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private fun setStreamerView() {
         lifecycleScope.launch {
             binding.preview.setVideoSourceProvider(viewModel.streamer)
+            binding.preview.listener = this@MainActivity
         }
     }
 
