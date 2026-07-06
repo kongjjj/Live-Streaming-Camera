@@ -137,7 +137,10 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private var isChatRetrying = false
     private var chatRetryJob: Job? = null
 
+    private lateinit var youtubeChatManager: YouTubeChatManager
+
     private val twitchChannelKey = "twitch_channel"
+    private val youtubeChannelIdKey = "youtube_channel_id"
     private val chatEnabledKey = "chat_enabled"
     @Suppress("PrivatePropertyName")
     private val PREF_CHAT_HISTORY = "chat_history"
@@ -159,11 +162,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             binding.chatRecyclerView.visibility = if (value) View.VISIBLE else View.GONE
             if (value) {
                 startChatRetryLoop()
+                startYouTubeChat()
             } else {
                 stopChatRetry()
                 webSocket?.cancel()
                 webSocket = null
                 isWebSocketConnected = false
+                stopYouTubeChat()
             }
         }
 
@@ -289,6 +294,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         setupEdgeToEdgeInsets()
         loadChatHistory()
+
+        youtubeChatManager = YouTubeChatManager(
+            httpClient = httpClient,
+            onNewMessages = { messages ->
+                messages.forEach { handleNewChatMessage(it) }
+            },
+            onSystemMessage = { showSystemMessage(it) }
+        )
+
         setupChat()
         initChatSettings()
         updateChatShadow()
@@ -686,6 +700,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             }
             loadMessageHistoryKey -> loadMessageHistory = prefs.getBoolean(loadMessageHistoryKey, true)
             loadMessageHistoryOnReconnectKey -> loadMessageHistoryOnReconnect = prefs.getBoolean(loadMessageHistoryOnReconnectKey, true)
+            youtubeChannelIdKey -> {
+                if (isChatEnabled) {
+                    startYouTubeChat()
+                }
+            }
             hideStatusBarKey -> applyStatusBarVisibility()
             showShakeLevelKey -> updateOverlayVisibility()
             showAudioLevelKey -> updateOverlayVisibility()
@@ -1020,6 +1039,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         // 解析 badges（保持不變）
         val badges = mutableListOf<Badge>()
+        // Add platform badge first
+        badges.add(Badge("twitch", "1", R.drawable.ic_twitch))
+
         tagsMap["badges"]?.split(",")?.forEach { badgeEntry ->
             val parts = badgeEntry.split("/")
             if (parts.size == 2) {
@@ -1084,7 +1106,110 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
         chatAdapter.submitList(chatMessages.toList())
         binding.chatRecyclerView.scrollToPosition(chatMessages.size - 1)
-        if (isChatEnabled) startChatRetryLoop()
+        if (isChatEnabled) {
+            startChatRetryLoop()
+            startYouTubeChat()
+        }
+    }
+
+    private fun startYouTubeChat() {
+        val channelId = prefs.getString(youtubeChannelIdKey, "")?.trim() ?: ""
+        if (channelId.startsWith("UC")) {
+            youtubeChatManager.start(channelId)
+        } else if (channelId.isNotEmpty()) {
+            showSystemMessage("YouTube 頻道 ID 格式錯誤，應以 UC 開頭")
+            youtubeChatManager.stop()
+        } else {
+            youtubeChatManager.stop()
+        }
+    }
+
+    private fun stopYouTubeChat() {
+        youtubeChatManager.stop()
+    }
+
+    private fun extractVideoId(input: String): String {
+        if (input.isBlank()) return ""
+        val trimmed = input.trim()
+        Log.d(TAG, "Extracting Video ID from input: $trimmed")
+
+        // 1. Check for standard watch URL (youtube.com/watch?v=...)
+        if (trimmed.contains("v=")) {
+            val parts = trimmed.split("v=")
+            if (parts.size > 1) {
+                val idPart = parts[1].substringBefore("&").substringBefore("?")
+                if (idPart.length >= 11) {
+                    val id = idPart.take(11)
+                    Log.d(TAG, "Extracted ID from v= parameter: $id")
+                    return id
+                }
+            }
+        }
+
+        // 2. Check for short URL (youtu.be/...) or live URL (youtube.com/live/...)
+        if (trimmed.contains("youtu.be/") || trimmed.contains("youtube.com/live/")) {
+            val idPart = trimmed.substringAfterLast("/").substringBefore("?").substringBefore("&")
+            if (idPart.length >= 11) {
+                val id = idPart.take(11)
+                Log.d(TAG, "Extracted ID from path: $id")
+                return id
+            }
+        }
+
+        // 3. Assume it's a raw Video ID
+        // YouTube IDs are typically 11 characters
+        val rawId = trimmed.substringBefore("?").substringBefore("&")
+        Log.d(TAG, "Assuming raw Video ID: $rawId")
+        return rawId
+    }
+
+    private fun handleNewChatMessage(msg: ChatMessage) {
+        synchronized(chatMessages) {
+            if (chatMessages.none { it.id == msg.id }) {
+                if (msg.sender.startsWith("YT: ")) {
+                    // YouTube message
+                } else {
+                    // Twitch message, update last received info
+                    lastMessageId = msg.id
+                    msg.timestamp?.let { lastReceivedTimestamp = it }
+                        ?: run { lastReceivedTimestamp = System.currentTimeMillis() }
+                }
+
+                chatMessages.add(msg)
+                if (chatMessages.size > 200) {
+                    chatMessages.removeAt(0)
+                }
+                saveChatMessages()
+            } else {
+                return // Duplicate message
+            }
+        }
+        runOnUiThread {
+            val atBottom = !binding.chatRecyclerView.canScrollVertically(1)
+            chatAdapter.submitList(chatMessages.toList()) {
+                if (atBottom) {
+                    binding.chatRecyclerView.smoothScrollToPosition(chatMessages.size - 1)
+                }
+            }
+        }
+
+        // TTS handling
+        val ttsEnabled = prefs.getBoolean(ttsEnabledKey, false)
+        if (ttsEnabled && !spokenMessageIds.contains(msg.id)) {
+            spokenMessageIds.add(msg.id)
+            if (spokenMessageIds.size > 500) {
+                spokenMessageIds.clear()
+            }
+            val ignoreSender = prefs.getBoolean(ttsIgnoreSenderKey, false)
+            val ignoreUrls = prefs.getBoolean(ttsIgnoreUrlsKey, false)
+            val ignoreEmotes = prefs.getBoolean(ttsIgnoreEmotesKey, false)
+            val textToSpeak = if (ignoreSender) {
+                msg.message
+            } else {
+                "${msg.sender} 說：${msg.message}"
+            }
+            ttsManager.speak(textToSpeak, ignoreUrls, ignoreEmotes)
+        }
     }
 
     private fun startChatRetryLoop() {
@@ -1226,46 +1351,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                         line.contains("PRIVMSG") -> {
                             val chatMessage = parseTwitchMessage(line)
                             chatMessage?.let { msg ->
-                                synchronized(chatMessages) {
-                                    if (chatMessages.none { it.id == msg.id }) {
-                                        lastMessageId = msg.id
-                                        msg.timestamp?.let { lastReceivedTimestamp = it }
-                                            ?: run { lastReceivedTimestamp = System.currentTimeMillis() }
-
-                                        chatMessages.add(msg)
-                                        if (chatMessages.size > 200) {
-                                            chatMessages.removeAt(0)
-                                        }
-                                        saveChatMessages()
-                                    }
-                                }
-                                runOnUiThread {
-                                    val atBottom = !binding.chatRecyclerView.canScrollVertically(1)
-                                    chatAdapter.submitList(chatMessages.toList()) {
-                                        if (atBottom) {
-                                            binding.chatRecyclerView.smoothScrollToPosition(chatMessages.size - 1)
-                                        }
-                                    }
-                                }
-
-                                // ✅ 將 TTS 程式碼移到這裡（在 msg 作用域內）
-                                val ttsEnabled = prefs.getBoolean(ttsEnabledKey, false)
-                                if (ttsEnabled && !spokenMessageIds.contains(msg.id)) {
-                                    spokenMessageIds.add(msg.id)
-                                    // 避免集合無限增長
-                                    if (spokenMessageIds.size > 500) {
-                                        spokenMessageIds.clear()
-                                    }
-                                    val ignoreSender = prefs.getBoolean(ttsIgnoreSenderKey, false)
-                                    val ignoreUrls = prefs.getBoolean(ttsIgnoreUrlsKey, false)
-                                    val ignoreEmotes = prefs.getBoolean(ttsIgnoreEmotesKey, false)
-                                    val textToSpeak = if (ignoreSender) {
-                                        msg.message
-                                    } else {
-                                        "${msg.sender} 說：${msg.message}"
-                                    }
-                                    ttsManager.speak(textToSpeak, ignoreUrls, ignoreEmotes)
-                                }
+                                handleNewChatMessage(msg)
                             }
                         }
 
@@ -2056,6 +2142,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         webSocket?.close(1000, "Activity destroyed")
         webSocket = null
         isWebSocketConnected = false
+        stopYouTubeChat()
         stopChatRetry()
         stopViewerUpdates()
         stopUptimeUpdates()
