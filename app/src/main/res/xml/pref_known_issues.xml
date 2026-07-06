@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.6">
+        <Preference
+            android:selectable="false"
+            android:title="加入youtube chat, 現在可輸入CHANNEL_ID 來顯示直播聊天。"
+            android:summary="CHANNEL_ID要輸入以 UC 開頭的CHANNEL_ID。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.5">
         <Preference
             android:selectable="false"

@@ -2,13 +2,21 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <PreferenceCategory app:title="Twitch 頻道設定">
-    <!-- 頻道名稱 -->
-    <EditTextPreference
-        android:key="twitch_channel"
-        android:title="Twitch 頻道名稱"
-        android:summary="輸入您要連線的頻道"
-        android:defaultValue="yourchannel"
-        app:useSimpleSummaryProvider="true" />
+        <!-- 頻道名稱 -->
+        <EditTextPreference
+            android:key="twitch_channel"
+            android:title="Twitch 頻道名稱"
+            android:summary="輸入您要連線的頻道"
+            android:defaultValue="yourchannel"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+    <PreferenceCategory app:title="YouTube 頻道設定">
+        <EditTextPreference
+            android:key="youtube_channel_id"
+            android:title="YouTube 頻道 ID (UC開頭的Channel ID)"
+            android:summary="請輸入以 UC 開頭的頻道 ID (例如: UCUZHFZ9jIKrLroW8LcyJEQQ)"
+            android:defaultValue=""
+            app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
     <PreferenceCategory app:title="字型設定">
     <!-- 字型大小滑桿 (12sp - 24sp) -->
