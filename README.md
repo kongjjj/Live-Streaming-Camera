@@ -24,7 +24,6 @@
 - ✔️ 設定匯出/匯入功能。
 - ❌ 拍攝照片。(現時有bug已隱藏，待修復)。
   
-![Live-Streaming-Camera](pics/Screenshot_1.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_7.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_2.jpg)
 ![Live-Streaming-Camera](pics/Screenshot_3.jpg)
