@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.7">
+        <Preference
+            android:selectable="false"
+            android:title="在youtube chat加入顯示emojis。"
+            android:summary="移除PiP功能。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.6">
         <Preference
             android:selectable="false"
