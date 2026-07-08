@@ -193,19 +193,7 @@ class MainViewModel(
     private val _isSplitThree = MutableLiveData(false)
     val isSplitThree: LiveData<Boolean> = _isSplitThree
 
-    // PiP 相關
-    private val _isPipEnabled = MutableLiveData(false)
-    val isPipEnabled: LiveData<Boolean> = _isPipEnabled
-    private val _pipPosition = MutableLiveData(8) // 預設右下角
-    val pipPosition: LiveData<Int> = _pipPosition
-    private val _pipSize = MutableLiveData(0.25f) // 預設 1/4
-    val pipSize: LiveData<Float> = _pipSize
-    private val _pipPadding = MutableLiveData(0) // 預設 0
-    val pipPadding: LiveData<Int> = _pipPadding
-    private val _pipRounded = MutableLiveData(false) // 預設無圓角
-    val pipRounded: LiveData<Boolean> = _pipRounded
-
-    private var pipCameraSource: ICameraSource? = null
+    // 偏好設定鍵名
 
     @Suppress("unused") private val audioManager = application.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -887,140 +875,14 @@ class MainViewModel(
         return newValue
     }
 
-    fun setPipEnabled(enabled: Boolean) {
-        _isPipEnabled.value = enabled
-        updateProcessorEffects()
-        
-        viewModelScope.launch {
-            if (enabled) {
-                startPipCamera()
-            } else {
-                stopPipCamera()
-            }
-        }
-    }
-
-    private suspend fun startPipCamera() {
-        if (pipCameraSource != null) return
-        
-        val cameraManager = getApplication<Application>().getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        val frontCameraId = cameraManager.cameraIdList.find { id ->
-            val characteristics = cameraManager.getCameraCharacteristics(id)
-            characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT
-        } ?: return
-
-        val surface = effectProcessor?.pipSurface ?: return
-        
-        try {
-            val factory = CameraSourceFactory(frontCameraId)
-            val dispatcherProvider = DispatcherProvider()
-            val source = factory.create(getApplication(), dispatcherProvider) as ICameraSource
-            
-            // 設定 PiP 相機解析度為 480x360 以節省 CPU
-            (source as IVideoSourceInternal).configure(VideoSourceConfig(resolution = Size(480, 360)))
-            
-            (source as ISurfaceSourceInternal).setOutput(surface)
-            (source as IVideoSourceInternal).startStream()
-            source.startPreview()
-            pipCameraSource = source
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start PiP camera", e)
-        }
-    }
-
-    private suspend fun stopPipCamera() {
-        pipCameraSource?.let {
-            try {
-                (it as IVideoSourceInternal).stopStream()
-                it.stopPreview()
-                (it as IVideoSourceInternal).release()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to stop PiP camera", e)
-            }
-            pipCameraSource = null
-        }
-    }
-
-    fun setPipPosition(pos: Int) {
-        _pipPosition.value = pos
-        updateProcessorEffects()
-    }
-
-    fun setPipSize(size: Float) {
-        _pipSize.value = size
-        updateProcessorEffects()
-    }
-
-    fun setPipPadding(padding: Int) {
-        _pipPadding.value = padding
-        updateProcessorEffects()
-    }
-
-    fun setPipRounded(rounded: Boolean) {
-        _pipRounded.value = rounded
-        updateProcessorEffects()
-    }
-
     private fun updateProcessorEffects() {
-        val posIndex = _pipPosition.value ?: 8
-        val colCount = 4
-        val rowCount = 3
-        
-        val col = posIndex % colCount
-        val row = posIndex / colCount // 0 = 頂行 (1-4), 1 = 中行 (5-8), 2 = 底行 (9-12)
-
-        // 將網格索引轉換為 GL 座標 [0, 1]
-        // 寬度每一格佔 1/4, 高度每一格佔 1/3
-        val cellWidth = 1.0f / colCount.toFloat()
-        val cellHeight = 1.0f / rowCount.toFloat()
-        
-        // PiP 畫面大小：直接填滿整個格子
-        var pipW = cellWidth
-        var pipH = cellHeight
-        
-        // 計算座標 (左下角)
-        // X 座標：從左到右 (0 -> 1)
-        var px = col * cellWidth
-        
-        // Y 座標修正：
-        // 為了讓使用者看到的 row 0 (1,2,3,4) 出現在直播畫面的最頂端，
-        // 我們直接將 py 設定為 row * cellHeight。
-        // row 0 -> py = 0.0
-        // row 1 -> py = 0.33
-        // row 2 -> py = 0.66
-        var py = row * cellHeight
-
-        // 處理 Padding
-        val paddingPx = (_pipPadding.value ?: 0).toFloat()
-        if (paddingPx > 0) {
-            val res = prefs.getString(videoResolutionKey, "1280x720") ?: "1280x720"
-            val parts = res.split("x")
-            val screenW = parts[0].toFloatOrNull() ?: 1280f
-            val screenH = parts[1].toFloatOrNull() ?: 720f
-            
-            val normPaddingX = paddingPx / screenW
-            val normPaddingY = paddingPx / screenH
-            
-            // 縮小 PiP 大小以騰出空間
-            pipW -= normPaddingX * 2.0f
-            pipH -= normPaddingY * 2.0f
-            
-            // 調整起始座標以保持在格子中央
-            px += normPaddingX
-            py += normPaddingY
-        }
-        
         effectProcessor?.updateEffects(
             grayscale = _isGrayscale.value ?: false,
             beauty = _isBeauty.value ?: false,
             blur = _isBlur.value ?: false,
             mosaic = _isMosaic.value ?: false,
             sepia = _isSepia.value ?: false,
-            splitThree = _isSplitThree.value ?: false,
-            pipEnabled = _isPipEnabled.value ?: false,
-            pipPos = floatArrayOf(px, py),
-            pipSz = floatArrayOf(pipW, pipH),
-            pipRounded = _pipRounded.value ?: false
+            splitThree = _isSplitThree.value ?: false
         )
     }
 

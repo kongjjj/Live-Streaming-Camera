@@ -79,9 +79,9 @@ class EmoteManager(private val context: Context) {
     }
 
     /**
-     * 非同步載入表情圖片（供 Adapter 呼叫，返回 Drawable 或 null）
+     * 非同步載入圖片（供 Adapter 呼叫，返回 Drawable 或 null）
      */
-    suspend fun loadEmoteDrawable(url: String): Drawable? = withContext(Dispatchers.IO) {
+    suspend fun loadImageDrawable(url: String): Drawable? = withContext(Dispatchers.IO) {
         drawableCache.get(url)?.let { return@withContext it }
         try {
             val drawable = Glide.with(context)
@@ -95,6 +95,11 @@ class EmoteManager(private val context: Context) {
             null
         }
     }
+
+    /**
+     * 為保持相容性，保留 loadEmoteDrawable
+     */
+    suspend fun loadEmoteDrawable(url: String): Drawable? = loadImageDrawable(url)
 
     // ---------- 私有解析方法 ----------
     private fun parseTwitchEmotesTag(tag: String?, message: String): List<Triple<Int, Int, String>> {

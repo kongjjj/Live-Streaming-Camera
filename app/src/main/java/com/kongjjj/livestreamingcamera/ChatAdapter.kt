@@ -132,8 +132,15 @@ class ChatAdapter(
 
         // Badges
         for (badge in msg.badges) {
-            val drawable = ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
-            drawable?.let {
+            val drawableFuture = if (badge.remoteUrl != null) {
+                null // Will be loaded asynchronously
+            } else if (badge.imageResId != 0) {
+                ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
+            } else {
+                null
+            }
+
+            drawableFuture?.let {
                 val textSizePx = holder.tvMessage.textSize
                 val height = textSizePx.toInt()
                 val width = (height * it.intrinsicWidth / it.intrinsicHeight).toInt()
@@ -164,7 +171,14 @@ class ChatAdapter(
             // ⬇️ 修復：在 Emote 模式下也要顯示 Badges 和 Sender
             // 1. Badges
             for (badge in msg.badges) {
-                val drawable = ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
+                val drawable = if (badge.remoteUrl != null) {
+                    null // Will be loaded asynchronously
+                } else if (badge.imageResId != 0) {
+                    ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
+                } else {
+                    null
+                }
+
                 drawable?.let {
                     val textSizePx = holder.tvMessage.textSize
                     val height = textSizePx.toInt()
@@ -198,70 +212,91 @@ class ChatAdapter(
             holder.tvSender.visibility = View.GONE
             holder.tvMessage.text = tempSpannable
 
-            // 非同步載入所有表情圖片，完成後取代佔位符
-            if (hasEmote) {
-                coroutineScope.launch {
-                    val drawableMap = mutableMapOf<String, Drawable?>()
-                    for (segment in msg.segments) {
-                        if (segment is MessageSegment.Emote) {
-                            val drawable = emoteDrawableCache[segment.url] ?: run {
-                                val loaded = emoteManager.loadEmoteDrawable(segment.url)
-                                if (loaded != null) {
-                                    emoteDrawableCache[segment.url] = loaded
-                                }
-                                loaded
+            // 非同步載入所有表情圖片和網路勳章，完成後取代佔位符
+            coroutineScope.launch {
+                val drawableMap = mutableMapOf<String, Drawable?>()
+                
+                // 載入表情圖片
+                for (segment in msg.segments) {
+                    if (segment is MessageSegment.Emote) {
+                        val drawable = emoteDrawableCache[segment.url] ?: run {
+                            val loaded = emoteManager.loadImageDrawable(segment.url)
+                            if (loaded != null) {
+                                emoteDrawableCache[segment.url] = loaded
                             }
-                            drawableMap[segment.url] = drawable
+                            loaded
+                        }
+                        drawableMap[segment.url] = drawable
+                    }
+                }
+                
+                // 載入網路勳章
+                for (badge in msg.badges) {
+                    if (badge.remoteUrl != null) {
+                        val drawable = emoteDrawableCache[badge.remoteUrl] ?: run {
+                            val loaded = emoteManager.loadImageDrawable(badge.remoteUrl)
+                            if (loaded != null) {
+                                emoteDrawableCache[badge.remoteUrl] = loaded
+                            }
+                            loaded
+                        }
+                        drawableMap[badge.remoteUrl] = drawable
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    // 重新建立完整的 Spannable (含圖片)
+                    val finalSpannable = SpannableStringBuilder()
+                    
+                    // 1. Badges (含本地與網路)
+                    for (badge in msg.badges) {
+                        val drawable = if (badge.remoteUrl != null) {
+                            drawableMap[badge.remoteUrl]
+                        } else if (badge.imageResId != 0) {
+                            ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
+                        } else {
+                            null
+                        }
+
+                        drawable?.let {
+                            val textSizePx = holder.tvMessage.textSize
+                            val height = textSizePx.toInt()
+                            val width = (height * it.intrinsicWidth / it.intrinsicHeight).toInt()
+                            it.setBounds(0, 0, width, height)
+                            val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
+                            finalSpannable.append("\u200B")
+                            finalSpannable.setSpan(imageSpan, finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                            finalSpannable.append("\u200B")
+                            finalSpannable.setSpan(SpaceSpan(spaceWidthPx), finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                         }
                     }
-                    withContext(Dispatchers.Main) {
-                        // 重新建立完整的 Spannable (含圖片)
-                        val finalSpannable = SpannableStringBuilder()
-                        // 重新加入 badges 和發送者 (SpannableStringBuilder 較難部分取代，重新建立較穩)
-                        
-                        // 1. Badges
-                        for (badge in msg.badges) {
-                            val drawable = ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
-                            drawable?.let {
+                    
+                    // 2. Sender
+                    val senderStart = finalSpannable.length
+                    finalSpannable.append("${msg.sender}: ")
+                    finalSpannable.setSpan(ForegroundColorSpan(senderColor), senderStart, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+                    // 3. Message segments
+                    for (segment in msg.segments) {
+                        when (segment) {
+                            is MessageSegment.Text -> finalSpannable.append(segment.text)
+                            is MessageSegment.Emote -> {
+                                val drawable = drawableMap[segment.url] ?: run {
+                                    finalSpannable.append("[${segment.name}]")
+                                    null
+                                } ?: continue
+
                                 val textSizePx = holder.tvMessage.textSize
                                 val height = textSizePx.toInt()
-                                val width = (height * it.intrinsicWidth / it.intrinsicHeight).toInt()
-                                it.setBounds(0, 0, width, height)
-                                val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
+                                val width = (height * drawable.intrinsicWidth / drawable.intrinsicHeight).coerceAtLeast(1)
+                                drawable.setBounds(0, 0, width, height)
+                                val imageSpan = ImageSpan(drawable, ImageSpan.ALIGN_BASELINE)
                                 finalSpannable.append("\u200B")
                                 finalSpannable.setSpan(imageSpan, finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                                finalSpannable.append("\u200B")
-                                finalSpannable.setSpan(SpaceSpan(spaceWidthPx), finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                             }
                         }
-                        
-                        // 2. Sender
-                        val senderStart = finalSpannable.length
-                        finalSpannable.append("${msg.sender}: ")
-                        finalSpannable.setSpan(ForegroundColorSpan(senderColor), senderStart, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-
-                        // 3. Message segments
-                        for (segment in msg.segments) {
-                            when (segment) {
-                                is MessageSegment.Text -> finalSpannable.append(segment.text)
-                                is MessageSegment.Emote -> {
-                                    val drawable = drawableMap[segment.url] ?: run {
-                                        finalSpannable.append("[${segment.name}]")
-                                        null
-                                    } ?: continue
-
-                                    val textSizePx = holder.tvMessage.textSize
-                                    val height = textSizePx.toInt()
-                                    val width = (height * drawable.intrinsicWidth / drawable.intrinsicHeight).coerceAtLeast(1)
-                                    drawable.setBounds(0, 0, width, height)
-                                    val imageSpan = ImageSpan(drawable, ImageSpan.ALIGN_BASELINE)
-                                    finalSpannable.append("\u200B")
-                                    finalSpannable.setSpan(imageSpan, finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                                }
-                            }
-                        }
-                        holder.tvMessage.text = finalSpannable
                     }
+                    holder.tvMessage.text = finalSpannable
                 }
             }
         }

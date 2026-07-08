@@ -125,11 +125,48 @@ class YouTubeChatManager(
                             val author = renderer.optJSONObject("authorName")?.optString("simpleText", "Unknown") ?: "Unknown"
                             val timestamp = (renderer.optString("timestampUsec").toLongOrNull() ?: (System.currentTimeMillis() * 1000L)) / 1000L
                             
-                            val messageText = parseRuns(renderer.optJSONObject("message"))
+                            val messageObj = renderer.optJSONObject("message")
+                            val messageText = parseRuns(messageObj)
+                            val segments = parseSegments(messageObj)
                             
                             if (messageText.isNotBlank()) {
                                 val badges = mutableListOf<Badge>()
+                                // 1. Platform Icon
                                 badges.add(Badge("youtube", "1", R.drawable.ic_youtube))
+                                
+                                // 2. YouTube Specific Badges (Moderator, Member, Owner)
+                                val authorBadges = renderer.optJSONArray("authorBadges")
+                                if (authorBadges != null) {
+                                    Log.d(TAG, "Found ${authorBadges.length()} badges for user $author")
+                                    for (j in 0 until authorBadges.length()) {
+                                        val badgeObj = authorBadges.getJSONObject(j).optJSONObject("liveChatAuthorBadgeRenderer") 
+                                            ?: authorBadges.getJSONObject(j).optJSONObject("liveChatBadgeRenderer")
+                                            
+                                        val tooltip = badgeObj?.optString("tooltip", "") ?: ""
+                                        val iconType = badgeObj?.optJSONObject("icon")?.optString("iconType")
+                                        
+                                        Log.d(TAG, "Badge $j: tooltip=$tooltip, iconType=$iconType")
+
+                                        when {
+                                            iconType == "MODERATOR" || tooltip.contains("管理員") || tooltip.contains("Moderator") -> {
+                                                badges.add(Badge("moderator", "1", R.drawable.ic_youtubemod))
+                                            }
+                                            iconType == "OWNER" || tooltip.contains("頻道擁有者") || tooltip.contains("Owner") -> {
+                                                badges.add(Badge("broadcaster", "1", R.drawable.ic_badge_broadcaster))
+                                            }
+                                            tooltip.contains("會員") || tooltip.contains("Member") || badgeObj?.has("customThumbnail") == true -> {
+                                                val customThumbnails = badgeObj?.optJSONObject("customThumbnail")?.optJSONArray("thumbnails")
+                                                val badgeUrl = customThumbnails?.optJSONObject(0)?.optString("url")
+                                                
+                                                if (badgeUrl != null) {
+                                                    badges.add(Badge("member", "1", 0, badgeUrl))
+                                                } else {
+                                                    badges.add(Badge("vip", "1", R.drawable.ic_badge_vip))
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
 
                                 newMessages.add(ChatMessage(
                                     id = id,
@@ -138,7 +175,7 @@ class YouTubeChatManager(
                                     color = "#FF0000",
                                     timestamp = timestamp,
                                     badges = badges,
-                                    segments = listOf(MessageSegment.Text(messageText))
+                                    segments = segments
                                 ))
                             }
                         }
@@ -226,9 +263,38 @@ class YouTubeChatManager(
             val run = runs.getJSONObject(i)
             if (run.has("text")) {
                 sb.append(run.getString("text"))
+            } else if (run.has("emoji")) {
+                val emoji = run.getJSONObject("emoji")
+                val text = emoji.optJSONArray("shortcuts")?.optString(0) ?: emoji.optString("emojiId", "emoji")
+                sb.append(text)
             }
         }
         return sb.toString()
+    }
+
+    private fun parseSegments(obj: JSONObject?): List<MessageSegment> {
+        val segments = mutableListOf<MessageSegment>()
+        if (obj == null) return segments
+        val runs = obj.optJSONArray("runs") ?: return segments
+        
+        for (i in 0 until runs.length()) {
+            val run = runs.getJSONObject(i)
+            if (run.has("text")) {
+                segments.add(MessageSegment.Text(run.getString("text")))
+            } else if (run.has("emoji")) {
+                val emoji = run.getJSONObject("emoji")
+                val name = emoji.optJSONArray("shortcuts")?.optString(0) ?: emoji.optString("emojiId", "emoji")
+                val thumbnails = emoji.optJSONObject("image")?.optJSONArray("thumbnails")
+                val url = thumbnails?.optJSONObject(0)?.optString("url")
+                
+                if (url != null) {
+                    segments.add(MessageSegment.Emote(name, url))
+                } else {
+                    segments.add(MessageSegment.Text(name))
+                }
+            }
+        }
+        return segments
     }
 
     companion object {

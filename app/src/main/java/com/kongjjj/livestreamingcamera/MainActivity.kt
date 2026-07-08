@@ -2029,10 +2029,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             hideCustomMenu()
             openTwitchChatSettings() 
         }
-        binding.menuItemPiP.setOnClickListener {
-            hideCustomMenu()
-            showSidePanel(PipSettingsFragment())
-        }
         binding.menuItemSettings.setOnClickListener { 
             hideCustomMenu()
             openSettings() 
