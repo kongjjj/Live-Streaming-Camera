@@ -22,14 +22,6 @@ class EffectShaderProvider : ShaderProvider {
             uniform int uSepia;
             uniform int uSplitThree;
 
-            // PiP 相關
-            uniform int uPipEnabled;
-            uniform int uPipRounded;
-            uniform samplerExternalOES uPipSampler;
-            uniform vec2 uPipPosition; // 左下角座標 [0, 1]
-            uniform vec2 uPipSize;     // 寬高 [0, 1]
-            uniform vec2 uScreenResolution; // 螢幕解析度
-
             void main() {
                 vec2 uv = $fragCoordsVarName;
                 
@@ -82,36 +74,6 @@ class EffectShaderProvider : ShaderProvider {
                 if (uGrayscale == 1) {
                     float gray = dot(finalColor, vec3(0.299, 0.587, 0.114));
                     finalColor = vec3(gray);
-                }
-
-                // 套用 PiP
-                if (uPipEnabled == 1) {
-                    if (uv.x >= uPipPosition.x && uv.x <= (uPipPosition.x + uPipSize.x) &&
-                        uv.y >= uPipPosition.y && uv.y <= (uPipPosition.y + uPipSize.y)) {
-                        
-                        vec2 pipUv = (uv - uPipPosition) / uPipSize;
-                        bool drawPip = true;
-                        
-                        if (uPipRounded == 1) {
-                            // 修正：計算 16px 對應到 PiP 內部座標 [0, 1] 的比例
-                            // 假設 PiP 寬高比與螢幕相同，或者以寬度為準
-                            float normRadiusX = 16.0 / (uScreenResolution.x * uPipSize.x);
-                            float normRadiusY = 16.0 / (uScreenResolution.y * uPipSize.y);
-                            
-                            vec2 dist = min(pipUv, 1.0 - pipUv);
-                            if (dist.x < normRadiusX && dist.y < normRadiusY) {
-                                // 由於寬高可能不同，使用橢圓圓心公式
-                                vec2 normalizedDist = (vec2(normRadiusX, normRadiusY) - dist) / vec2(normRadiusX, normRadiusY);
-                                if (length(normalizedDist) > 1.0) {
-                                    drawPip = false;
-                                }
-                            }
-                        }
-                        
-                        if (drawPip) {
-                            finalColor = texture2D(uPipSampler, pipUv).rgb;
-                        }
-                    }
                 }
 
                 gl_FragColor = vec4(finalColor, color.a * uAlphaScale);

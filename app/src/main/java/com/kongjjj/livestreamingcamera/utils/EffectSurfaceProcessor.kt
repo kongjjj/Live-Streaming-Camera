@@ -3,7 +3,6 @@ package com.kongjjj.livestreamingcamera.utils
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.SurfaceTexture
-import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.util.Size
 import android.view.Surface
@@ -56,31 +55,20 @@ class EffectSurfaceProcessor(
     private var isMosaic = false
     private var isSepia = false
     private var isSplitThree = false
-    private var isPipRounded = false
 
     private val surfaceToEffectsMap: MutableMap<Surface, Boolean> = HashMap()
     private var inputSurfaceSize = Size(0, 0)
 
-    // PiP 相關
-    var isPipEnabled = false
-    private var pipPosition = floatArrayOf(0.7f, 0.7f) // 左下角預設
-    private var pipSize = floatArrayOf(0.25f, 0.25f)    // 1/4 預設
-    private var pipTextureId = -1
-    private var pipSurfaceTexture: SurfaceTexture? = null
-    var pipSurface: Surface? = null
-        private set
-
+    /**
+     * 更新特效狀態
+     */
     fun updateEffects(
         grayscale: Boolean,
         beauty: Boolean,
         blur: Boolean,
         mosaic: Boolean,
         sepia: Boolean,
-        splitThree: Boolean,
-        pipEnabled: Boolean = false,
-        pipPos: FloatArray? = null,
-        pipSz: FloatArray? = null,
-        pipRounded: Boolean = false
+        splitThree: Boolean
     ) {
         isGrayscale = grayscale
         isBeauty = beauty
@@ -88,10 +76,6 @@ class EffectSurfaceProcessor(
         isMosaic = mosaic
         isSepia = sepia
         isSplitThree = splitThree
-        isPipEnabled = pipEnabled
-        isPipRounded = pipRounded
-        pipPos?.let { pipPosition = it }
-        pipSz?.let { pipSize = it }
     }
 
     /**
@@ -127,15 +111,6 @@ class EffectSurfaceProcessor(
 
         inputSurfaceSize = surfaceSize
         val future = submitSafely {
-            if (pipTextureId == -1) {
-                pipTextureId = createTexture()
-                pipSurfaceTexture = SurfaceTexture(pipTextureId).apply {
-                    setDefaultBufferSize(480, 360) // 設定 PiP 解析度為 480x360 以節省 CPU
-                    setOnFrameAvailableListener({ it.updateTexImage() }, glHandler)
-                }
-                pipSurface = Surface(pipSurfaceTexture)
-            }
-
             val surfaceTexture = SurfaceTexture(renderer.textureName)
             surfaceTexture.setDefaultBufferSize(surfaceSize.width, surfaceSize.height)
             surfaceTexture.setOnFrameAvailableListener(this, glHandler)
@@ -242,8 +217,6 @@ class EffectSurfaceProcessor(
     override fun release() {
         if (isReleaseRequested.getAndSet(true)) return
         executeSafely {
-            pipSurface?.release()
-            pipSurfaceTexture?.release()
             if (!isReleased) {
                 isReleased = true
                 checkReadyToRelease()
@@ -337,19 +310,6 @@ class EffectSurfaceProcessor(
         }
     }
 
-    private fun createTexture(): Int {
-        val textures = IntArray(1)
-        GLES20.glGenTextures(1, textures, 0)
-        val textureId = textures[0]
-        val target = GLES11Ext.GL_TEXTURE_EXTERNAL_OES
-        GLES20.glBindTexture(target, textureId)
-        GLES20.glTexParameteri(target, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(target, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(target, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE)
-        GLES20.glTexParameteri(target, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE)
-        return textureId
-    }
-
     private var currentProgram = -1
     private val uniformLocations = mutableMapOf<Int, MutableMap<String, Int>>()
 
@@ -375,20 +335,8 @@ class EffectSurfaceProcessor(
             GLES20.glUniform1i(getUniformLocation(activeProgram, "uMosaic"), if (enabled && isMosaic) 1 else 0)
             GLES20.glUniform1i(getUniformLocation(activeProgram, "uSepia"), if (enabled && isSepia) 1 else 0)
             GLES20.glUniform1i(getUniformLocation(activeProgram, "uSplitThree"), if (enabled && isSplitThree) 1 else 0)
-
-            GLES20.glUniform1i(getUniformLocation(activeProgram, "uPipEnabled"), if (enabled && isPipEnabled) 1 else 0)
-            GLES20.glUniform1i(getUniformLocation(activeProgram, "uPipRounded"), if (enabled && isPipRounded) 1 else 0)
-            if (enabled && isPipEnabled) {
-                GLES20.glActiveTexture(GLES20.GL_TEXTURE1)
-                GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, pipTextureId)
-                GLES20.glUniform1i(getUniformLocation(activeProgram, "uPipSampler"), 1)
-                GLES20.glUniform2fv(getUniformLocation(activeProgram, "uPipPosition"), 1, pipPosition, 0)
-                GLES20.glUniform2fv(getUniformLocation(activeProgram, "uPipSize"), 1, pipSize, 0)
-                GLES20.glUniform2f(getUniformLocation(activeProgram, "uScreenResolution"), inputSurfaceSize.width.toFloat(), inputSurfaceSize.height.toFloat())
-                GLES20.glUniform1f(getUniformLocation(activeProgram, "uAlphaScale"), 1.0f)
-            } else {
-                GLES20.glUniform1f(getUniformLocation(activeProgram, "uAlphaScale"), 1.0f)
-            }
+            
+            GLES20.glUniform1f(getUniformLocation(activeProgram, "uAlphaScale"), 1.0f)
         }
     }
 
