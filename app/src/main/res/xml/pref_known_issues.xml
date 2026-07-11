@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.8">
+        <Preference
+            android:selectable="false"
+            android:title="強化聊天室自動捲動的靈敏度。"
+            android:summary="確保在 Twitch 和 YouTube 訊息大量交替出現時，自動捲動的觸發更加精準且不漏失。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.7">
         <Preference
             android:selectable="false"
