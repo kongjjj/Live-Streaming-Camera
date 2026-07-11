@@ -74,6 +74,7 @@ import java.util.concurrent.TimeUnit
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.kongjjj.livestreamingcamera.getBadgeImageRes
 import com.kongjjj.livestreamingcamera.tts.TTSManager
+import kotlinx.coroutines.channels.Channel
 
 @SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener, io.github.thibaultbee.streampack.ui.views.PreviewView.Listener {
@@ -136,6 +137,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private var channel: String = ""
     private var isChatRetrying = false
     private var chatRetryJob: Job? = null
+    private val chatUpdateChannel = Channel<Unit>(Channel.CONFLATED)
+    private var chatUpdateJob: Job? = null
 
     private lateinit var youtubeChatManager: YouTubeChatManager
 
@@ -1061,10 +1064,14 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             prefix.substringBefore("!")
         }
 
-        val sender = if (displayName.isNotBlank() && !displayName.equals(username, ignoreCase = true)) {
-            "$displayName($username)"
+        val sender = if (displayName.isNotBlank()) {
+            if (displayName.equals(username, ignoreCase = true)) {
+                displayName
+            } else {
+                "$displayName($username)"
+            }
         } else {
-            username.ifEmpty { displayName }.ifEmpty { "unknown" }
+            username.ifEmpty { "unknown" }
         }
 
         val messageText = restOfMessage.substringAfter(" :", "").trim()
@@ -1106,10 +1113,39 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
         chatAdapter.submitList(chatMessages.toList())
         binding.chatRecyclerView.scrollToPosition(chatMessages.size - 1)
+
+        chatUpdateJob?.cancel()
+        chatUpdateJob = lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                for (u in chatUpdateChannel) {
+                    delay(100) // Batch period
+                    val atBottom = isAtBottom()
+                    val currentList = synchronized(chatMessages) { chatMessages.toList() }
+
+                    saveChatMessages()
+
+                    chatAdapter.submitList(currentList) {
+                        if (atBottom && currentList.isNotEmpty()) {
+                            binding.chatRecyclerView.scrollToPosition(currentList.size - 1)
+                        }
+                    }
+                }
+            }
+        }
+
         if (isChatEnabled) {
             startChatRetryLoop()
             startYouTubeChat()
         }
+    }
+
+    private fun isAtBottom(): Boolean {
+        val layoutManager = binding.chatRecyclerView.layoutManager as? LinearLayoutManager ?: return false
+        val lastVisible = layoutManager.findLastVisibleItemPosition()
+        val total = layoutManager.itemCount
+        if (total == 0) return true
+        // Threshold is 10 messages
+        return lastVisible >= total - 1 - 10
     }
 
     private fun startYouTubeChat() {
@@ -1179,19 +1215,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 if (chatMessages.size > 200) {
                     chatMessages.removeAt(0)
                 }
-                saveChatMessages()
             } else {
                 return // Duplicate message
             }
         }
-        runOnUiThread {
-            val atBottom = !binding.chatRecyclerView.canScrollVertically(1)
-            chatAdapter.submitList(chatMessages.toList()) {
-                if (atBottom) {
-                    binding.chatRecyclerView.smoothScrollToPosition(chatMessages.size - 1)
-                }
-            }
-        }
+        chatUpdateChannel.trySend(Unit)
 
         // TTS handling
         val ttsEnabled = prefs.getBoolean(ttsEnabledKey, false)
@@ -1310,15 +1338,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                                 if (chatMessages.size > 200) {
                                     chatMessages.subList(0, chatMessages.size - 200).clear()
                                 }
-
-                                saveChatMessages()
                             }
-
-                            runOnUiThread {
-                                chatAdapter.submitList(chatMessages.toList()) {
-                                    binding.chatRecyclerView.scrollToPosition(chatMessages.size - 1)
-                                }
-                            }
+                            chatUpdateChannel.trySend(Unit)
                         }
                     }
                 }
@@ -1394,31 +1415,27 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private fun showSystemMessage(text: String) {
-        runOnUiThread {
-            synchronized(chatMessages) {
-                // 如果最後一條訊息內容相同且是系統訊息，則不再重複添加
-                if (chatMessages.isNotEmpty()) {
-                    val last = chatMessages.last()
-                    if (last.isSystem && last.message == text) {
-                        return@synchronized
-                    }
-                }
-                val msg = ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    sender = "System",
-                    message = text,
-                    isSystem = true,
-                    timestamp = System.currentTimeMillis()
-                )
-                chatMessages.add(msg)
-                if (chatMessages.size > 200) {
-                    chatMessages.removeAt(0)
+        synchronized(chatMessages) {
+            // 如果最後一條訊息內容相同且是系統訊息，則不再重複添加
+            if (chatMessages.isNotEmpty()) {
+                val last = chatMessages.last()
+                if (last.isSystem && last.message == text) {
+                    return
                 }
             }
-            chatAdapter.submitList(chatMessages.toList()) {
-                binding.chatRecyclerView.scrollToPosition(chatMessages.size - 1)
+            val msg = ChatMessage(
+                id = UUID.randomUUID().toString(),
+                sender = "System",
+                message = text,
+                isSystem = true,
+                timestamp = System.currentTimeMillis()
+            )
+            chatMessages.add(msg)
+            if (chatMessages.size > 200) {
+                chatMessages.removeAt(0)
             }
         }
+        chatUpdateChannel.trySend(Unit)
     }
 
     private fun saveChatMessages() {
