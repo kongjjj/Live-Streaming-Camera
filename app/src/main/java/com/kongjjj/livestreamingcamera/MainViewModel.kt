@@ -883,7 +883,7 @@ class MainViewModel(
                 if (streamer.second.isStreamingFlow.value) {
                     try {
                         Log.d(TAG, "正在停止錄影...")
-                        withTimeout(5000L) {
+                        withTimeout(5.seconds) {
                             streamer.second.stopStream()
                             streamer.second.close()
                         }
