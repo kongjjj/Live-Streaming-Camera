@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.6.9">
+        <Preference
+            android:selectable="false"
+            android:title="修正Youtube留言名字顏色，使用者更容易讀取。"
+            android:summary="加入留言間距，可調整每個留言的距離。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.8">
         <Preference
             android:selectable="false"
