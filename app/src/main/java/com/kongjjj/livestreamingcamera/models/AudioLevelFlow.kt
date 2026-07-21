@@ -6,6 +6,7 @@ import com.kongjjj.livestreamingcamera.audio.AudioPassthroughManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlin.math.sqrt
+import kotlin.time.Duration.Companion.milliseconds
 
 class AudioLevelFlow {
 
@@ -32,7 +33,7 @@ class AudioLevelFlow {
                     val level = calculateAudioLevel(record, buffer)
                     _audioLevelFlow.emit(level)
                 }
-                delay(30)
+                delay(30.milliseconds)
             }
         }
     }
@@ -45,7 +46,7 @@ class AudioLevelFlow {
 
     private fun calculateAudioLevel(
         audioRecord: AudioRecord,
-        buffer: ByteArray
+        buffer: ByteArray,
     ): AudioLevel {
         val bytesRead = audioRecord.read(buffer, 0, buffer.size)
         if (bytesRead <= 0) return AudioLevel.SILENT
@@ -62,7 +63,7 @@ class AudioLevelFlow {
             val normalized = sample / 32768.0
 
             // 立體聲處理
-            if ((i / 2) % 2 == 0) {
+            if (((i / 2) % 2) == 0) {
                 sumSquaresLeft += normalized * normalized
                 peakLeft = maxOf(peakLeft, kotlin.math.abs(normalized))
             } else {
