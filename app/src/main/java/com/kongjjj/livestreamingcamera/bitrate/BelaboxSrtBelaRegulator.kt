@@ -61,29 +61,16 @@ class BelaboxSrtBelaRegulator(
 
     private val defaultSrtLatencyMs: Int = 3000
 
-    fun setTargetBitrate(bitrate: Int) {
-        targetBitrate = bitrate.toLong()
-    }
-
-    fun setSettings(s: Settings) {
-        Log.i(TAG, "adaptive-bitrate: Using settings $s")
-        settings = s
-    }
-
-    fun getCurrentBitrate(): Int = curBitrate.toInt()
-
-    fun getCurrentMaximumBitrateInKbps(): Long = curBitrate / 1000
-
     private fun rttToSendBufferSize(rtt: Double, throughput: Double): Double {
         return (throughput / 8.0) * rtt / 1316.0
     }
 
     private fun updateSendBufferSizeAverage(sendBufferSize: Double) {
-        sendBufferSizeAvg = sendBufferSizeAvg * 0.99 + sendBufferSize * 0.01
+        sendBufferSizeAvg = (sendBufferSizeAvg * 0.99) + (sendBufferSize * 0.01)
     }
 
     private fun updateSendBufferSizeJitter(sendBufferSize: Double) {
-        sendBufferSizeJitter = 0.99 * sendBufferSizeJitter
+        sendBufferSizeJitter *= 0.99
         val deltaSendBufferSize = sendBufferSize - prevSendBufferSize
         if (deltaSendBufferSize > sendBufferSizeJitter) {
             sendBufferSizeJitter = deltaSendBufferSize
@@ -92,11 +79,7 @@ class BelaboxSrtBelaRegulator(
     }
 
     private fun updateRttAverage(rtt: Double) {
-        if (rttAvg == 0.0) {
-            rttAvg = rtt
-        } else {
-            rttAvg = rttAvg * 0.99 + 0.01 * rtt
-        }
+        rttAvg = if (rttAvg == 0.0) rtt else (rttAvg * 0.99) + (0.01 * rtt)
     }
 
     private fun updateAverageRttDelta(rtt: Double): Double {
@@ -122,8 +105,7 @@ class BelaboxSrtBelaRegulator(
 
     private fun updateThroughput(mbpsSendRate: Double?) {
         if (mbpsSendRate == null) return
-        throughput *= 0.97
-        throughput += (mbpsSendRate * 1_000_000.0 / 1024.0) * 0.03
+        throughput = (throughput * 0.97) + (mbpsSendRate * 1_000_000.0 / 1024.0) * 0.03
     }
 
     private fun logAdaptiveAction(actionTaken: String) {
@@ -131,8 +113,8 @@ class BelaboxSrtBelaRegulator(
     }
 
     private fun updateBitrate(stats: Stats) {
-    val rttMs = stats.msRTT
-    if (rttMs <= 0) return
+        val rttMs = stats.msRTT
+        if (rttMs <= 0.0) return
 
         if (curBitrate == 0L) {
             curBitrate = ADAPTIVE_BITRATE_START
@@ -142,10 +124,9 @@ class BelaboxSrtBelaRegulator(
         updateSendBufferSizeAverage(sendBufferSize)
         updateSendBufferSizeJitter(sendBufferSize)
 
-        val rtt = rttMs.toDouble()
-        updateRttAverage(rtt)
-        val deltaRtt = updateAverageRttDelta(rtt)
-        updateRttMin(rtt)
+        updateRttAverage(rttMs)
+        val deltaRtt = updateAverageRttDelta(rttMs)
+        updateRttMin(rttMs)
         updateRttJitter(deltaRtt)
         updateThroughput(stats.mbpsSendRate)
 
@@ -164,19 +145,19 @@ class BelaboxSrtBelaRegulator(
         val rttThMin = rttMin + max(1.0, rttJitter * 2.0)
 
         // Decrease to minimum if severe conditions
-        if (bitrate > settings.minimumBitrate && (rtt >= (srtLatency / 3.0) || sendBufferSize > sendBufferSizeTh3)) {
+        if (bitrate > settings.minimumBitrate && (rttMs >= (srtLatency / 3.0) || sendBufferSize > sendBufferSizeTh3)) {
             bitrate = settings.minimumBitrate
             nextBitrateDecrTimeNs = nowNs + BITRATE_DECR_INTERVAL_MS * 1_000_000L
-            logAdaptiveAction("Set min: ${bitrate / 1000}, rtt: $rtt >= latency/3: ${srtLatency / 3.0} or bs: $sendBufferSize > bs_th3: $sendBufferSizeTh3")
-        } else if (nowNs > nextBitrateDecrTimeNs && (rtt > (srtLatency / 5.0) || sendBufferSize > sendBufferSizeTh2)) {
+            logAdaptiveAction("Set min: ${bitrate / 1000}, rtt: $rttMs >= latency/3: ${srtLatency / 3.0} or bs: $sendBufferSize > bs_th3: $sendBufferSizeTh3")
+        } else if (nowNs > nextBitrateDecrTimeNs && (rttMs > (srtLatency / 5.0) || sendBufferSize > sendBufferSizeTh2)) {
             bitrate -= (BITRATE_DECR_MIN + bitrate / BITRATE_DECR_SCALE)
             nextBitrateDecrTimeNs = nowNs + BITRATE_DECR_FAST_INTERVAL_MS * 1_000_000L
-            logAdaptiveAction("Fast decr: ${(BITRATE_DECR_MIN + bitrate / BITRATE_DECR_SCALE) / 1000}, rtt: $rtt > latency/5: ${srtLatency / 5.0} or bs: $sendBufferSize > bs_th2: $sendBufferSizeTh2")
-        } else if (nowNs > nextBitrateDecrTimeNs && (rtt > rttThMax || sendBufferSize > sendBufferSizeTh1)) {
+            logAdaptiveAction("Fast decr: ${(BITRATE_DECR_MIN + bitrate / BITRATE_DECR_SCALE) / 1000}, rtt: $rttMs > latency/5: ${srtLatency / 5.0} or bs: $sendBufferSize > bs_th2: $sendBufferSizeTh2")
+        } else if (nowNs > nextBitrateDecrTimeNs && (rttMs > rttThMax || sendBufferSize > sendBufferSizeTh1)) {
             bitrate -= BITRATE_DECR_MIN
             nextBitrateDecrTimeNs = nowNs + BITRATE_DECR_INTERVAL_MS * 1_000_000L
-            logAdaptiveAction("Decr: ${BITRATE_DECR_MIN / 1000}, rtt: $rtt > rtt_th_max: $rttThMax or bs: $sendBufferSize > bs_th1: $sendBufferSizeTh1")
-        } else if (nowNs > nextBitrateIncrTimeNs && rtt < rttThMin && rttAvgDelta < 0.01) {
+            logAdaptiveAction("Decr: ${BITRATE_DECR_MIN / 1000}, rtt: $rttMs > rtt_th_max: $rttThMax or bs: $sendBufferSize > bs_th1: $sendBufferSizeTh1")
+        } else if (nowNs > nextBitrateIncrTimeNs && rttMs < rttThMin && rttAvgDelta < 0.01) {
             bitrate += BITRATE_INCR_MIN + bitrate / BITRATE_INCR_SCALE
             nextBitrateIncrTimeNs = nowNs + BITRATE_INCR_INTERVAL_MS * 1_000_000L
         }

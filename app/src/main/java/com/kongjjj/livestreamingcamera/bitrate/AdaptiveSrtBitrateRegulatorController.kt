@@ -18,7 +18,7 @@ class AdaptiveSrtBitrateRegulatorController {
         private val bitrateRegulatorConfig: BitrateRegulatorConfig = BitrateRegulatorConfig(),
         private val moblinConfig: MoblinSrtFightConfig = MoblinSrtFightConfig(),
         private val delayTimeInMs: Long = 200, // Moblin updates every 200ms
-        private val mode: RegulatorMode = RegulatorMode.MOBLIN_FAST
+        private val mode: RegulatorMode = RegulatorMode.MOBLIN_FAST,
     ) : BitrateRegulatorController.Factory() {
         override fun newBitrateRegulatorController(
             pipelineOutput: IEncodingPipelineOutput,
@@ -32,11 +32,7 @@ class AdaptiveSrtBitrateRegulatorController {
                 "Video encoder must be set"
             }
 
-            val audioEncoder = if (pipelineOutput is IConfigurableAudioEncodingPipelineOutput) {
-                pipelineOutput.audioEncoder
-            } else {
-                null
-            }
+            val audioEncoder = (pipelineOutput as? IConfigurableAudioEncodingPipelineOutput)?.audioEncoder
 
             // Choose factory based on selected mode
             val factory: SrtBitrateRegulator.Factory = when (mode) {

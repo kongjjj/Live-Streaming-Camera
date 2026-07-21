@@ -11,7 +11,7 @@ data class MoblinSrtFightConfig(
         rttDiffHighAllowedSpike = 50.0,
         rttDiffHighMinDecrease = 250_000L,
         pifDiffIncreaseFactor = 100_000L,
-        minimumBitrate = 50_000L
+        minimumBitrate = 50_000L,
     ),
     val slowSettings: MoblinSrtFightSettings = MoblinSrtFightSettings(
         packetsInFlight = 500L,
