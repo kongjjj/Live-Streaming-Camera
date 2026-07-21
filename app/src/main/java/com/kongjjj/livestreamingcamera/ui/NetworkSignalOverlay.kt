@@ -16,6 +16,7 @@ import android.view.View
 import androidx.core.app.ActivityCompat
 import androidx.core.graphics.toColorInt
 import kotlinx.coroutines.*
+import kotlin.time.Duration.Companion.milliseconds
 
 class NetworkSignalOverlay @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
@@ -60,7 +61,7 @@ class NetworkSignalOverlay @JvmOverloads constructor(
                 updateSignalStrengths()
                 updateActiveNetwork()
                 invalidate()
-                delay(2000)
+                delay(2000.milliseconds)
             }
         }
     }
@@ -97,12 +98,18 @@ class NetworkSignalOverlay @JvmOverloads constructor(
             if (activeSubscriptionInfoList != null) {
                 for (subInfo in activeSubscriptionInfoList) {
                     val tmForSub = telephonyManager.createForSubscriptionId(subInfo.subscriptionId)
-                    val signalStrength = tmForSub.signalStrength
-                    val level = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                        signalStrength?.cellSignalStrengths?.firstOrNull()?.level ?: 0
+                    val level = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                        val signalStrength = tmForSub.signalStrength
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                            signalStrength?.cellSignalStrengths?.firstOrNull()?.level ?: 0
+                        } else {
+                            @Suppress("DEPRECATION")
+                            signalStrength?.level ?: 0
+                        }
                     } else {
-                        @Suppress("DEPRECATION")
-                        signalStrength?.level ?: 0
+                        // For API < 28, there is no easy way to get signal strength synchronously from TelephonyManager
+                        // We would need PhoneStateListener, but for now we fallback to 0 or -1
+                        0
                     }
                     when (subInfo.simSlotIndex) {
                         0 -> sim1Level = level
@@ -125,7 +132,7 @@ class NetworkSignalOverlay @JvmOverloads constructor(
             }
             capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> {
                 activeNetworkType = "cellular"
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
                     val defaultDataSubId = SubscriptionManager.getDefaultDataSubscriptionId()
                     val subInfo = subscriptionManager.getActiveSubscriptionInfo(defaultDataSubId)
                     activeSimSlot = subInfo?.simSlotIndex

@@ -10,6 +10,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.PI
 
@@ -62,7 +63,7 @@ class RotationOverlay @JvmOverloads constructor(
             val z = event.values[2]
             
             // 計算 roll (旋轉角度)
-            val rawRoll = atan2(y, z).toFloat() * 180f / PI.toFloat()
+            val rawRoll = atan2(y, z) * 180f / PI.toFloat()
             
             // 指數平滑
             filteredRoll = smoothingAlpha * rawRoll + (1 - smoothingAlpha) * filteredRoll
@@ -94,7 +95,7 @@ class RotationOverlay @JvmOverloads constructor(
         canvas.drawLine(lineX, 0f, lineX, h, linePaint)
 
         // 顯示旋轉角度文字 (R: %.0f°)
-        val rotationText = String.format("R: %.0f°", roll)
+        val rotationText = String.format(Locale.US, "R: %.0f°", roll)
         val textY = (h / 2f) - ((textPaint.descent() + textPaint.ascent()) / 2f)
         canvas.drawText(rotationText, 4f, textY, textPaint)
     }
