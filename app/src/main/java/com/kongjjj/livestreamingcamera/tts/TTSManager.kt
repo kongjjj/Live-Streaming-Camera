@@ -34,7 +34,7 @@ class TTSManager(context: Context) : TextToSpeech.OnInitListener {
             val result = tts?.setLanguage(currentLocale)
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 Log.w(TAG, "Language not supported, fallback to US English")
-                tts?.setLanguage(Locale.US)
+                tts?.language = Locale.US
             }
             isReady = true
             Log.d(TAG, "TTS initialized")
