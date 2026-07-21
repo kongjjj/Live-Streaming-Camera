@@ -13,7 +13,7 @@ class BluetoothAudioSourceFactory(private val device: AudioDeviceInfo?) :
 
     override suspend fun create(context: Context): IAudioSourceInternal {
         requireNotNull(device) { "No Bluetooth device provided" }
-        return BluetoothAudioSource(context, device)
+        return BluetoothAudioSource(device)
     }
 
     override fun isSourceEquals(source: IAudioSourceInternal?): Boolean {

@@ -1,13 +1,10 @@
 package com.kongjjj.livestreamingcamera.bluetooth
 
 import android.Manifest
-import android.content.Context
 import android.media.AudioDeviceInfo
 import android.media.AudioFormat
-import android.media.AudioManager
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import io.github.thibaultbee.streampack.core.elements.data.RawFrame
@@ -22,8 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class BluetoothAudioSource(
-    private val context: Context,
-    private val preferredDevice: AudioDeviceInfo?
+    private val preferredDevice: AudioDeviceInfo?,
 ) : IAudioSourceInternal,
     IAudioFrameSourceInternal,
     SuspendConfigurable<AudioSourceConfig>,
@@ -34,7 +30,7 @@ class BluetoothAudioSource(
     private var bufferSize = 0
     private var silentBuffer: ByteArray? = null
     private var currentConfig: AudioSourceConfig? = null
-    private val _isStreamingFlow = MutableStateFlow(false)
+    private val _isStreamingFlow = MutableStateFlow(value = false)
     override val isStreamingFlow = _isStreamingFlow.asStateFlow()
     private val tag = "BluetoothAudioSrc"
 
@@ -56,38 +52,26 @@ class BluetoothAudioSource(
 
         currentConfig = config
 
-        audioRecord = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val audioFormat = AudioFormat.Builder()
-                .setEncoding(config.byteFormat)
-                .setSampleRate(config.sampleRate)
-                .setChannelMask(config.channelConfig)
-                .build()
+        val audioFormat = AudioFormat.Builder()
+            .setEncoding(config.byteFormat)
+            .setSampleRate(config.sampleRate)
+            .setChannelMask(config.channelConfig)
+            .build()
 
-            val record = AudioRecord.Builder()
-                .setAudioFormat(audioFormat)
-                .setBufferSizeInBytes(bufferSize)
-                .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
-                .build()
+        val record = AudioRecord.Builder()
+            .setAudioFormat(audioFormat)
+            .setBufferSizeInBytes(bufferSize)
+            .setAudioSource(MediaRecorder.AudioSource.VOICE_COMMUNICATION)
+            .build()
 
-            preferredDevice?.let { device ->
-                val success = record.setPreferredDevice(device)
-                Log.i(tag, "setPreferredDevice(${device.productName}) success=$success")
-                // 驗證 preferred device 是否真的設定成功
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val actualDevice = record.preferredDevice
-                    Log.i(tag, "Actual preferred device after set: ${actualDevice?.productName ?: "null"}")
-                }
-            }
-            record
-        } else {
-            AudioRecord(
-                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
-                config.sampleRate,
-                config.channelConfig,
-                config.byteFormat,
-                bufferSize
-            )
+        preferredDevice?.let { device ->
+            val success = record.setPreferredDevice(device)
+            Log.i(tag, "setPreferredDevice(${device.productName}) success=$success")
+            // 驗證 preferred device 是否真的設定成功
+            val actualDevice = record.preferredDevice
+            Log.i(tag, "Actual preferred device after set: ${actualDevice?.productName ?: "null"}")
         }
+        audioRecord = record
 
         if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
             release()
@@ -123,7 +107,7 @@ class BluetoothAudioSource(
     private fun fillWithSilence(buffer: java.nio.ByteBuffer) {
         buffer.clear()
         val silence = silentBuffer
-        if (silence != null && silence.size >= buffer.remaining()) {
+        if (silence != null && (silence.size >= buffer.remaining())) {
             buffer.put(silence, 0, buffer.remaining())
         } else {
             // Fallback if silentBuffer is not initialized or too small
@@ -146,17 +130,16 @@ class BluetoothAudioSource(
         val bytesRead = ar.read(buffer, buffer.remaining())
         if (bytesRead > 0) {
             frame.timestampInUs = System.nanoTime() / 1000L
-            return frame
         } else {
             Log.e(tag, "fillAudioFrame read error: $bytesRead")
             // Fill with silence to avoid noise/crash
             fillWithSilence(buffer)
-            return frame
         }
+        return frame
     }
 
     override fun getAudioFrame(frameFactory: IReadOnlyRawFrameFactory): RawFrame {
-        val cfg = requireNotNull(currentConfig) { "Audio source not configured" }
+        requireNotNull(currentConfig) { "Audio source not configured" }
         return fillAudioFrame(frameFactory.create(bufferSize, 0))
     }
 }

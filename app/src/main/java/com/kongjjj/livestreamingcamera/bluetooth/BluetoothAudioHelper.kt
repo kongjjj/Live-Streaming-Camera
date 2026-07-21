@@ -1,9 +1,6 @@
 package com.kongjjj.livestreamingcamera.bluetooth
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager // 引入現代的 BluetoothManager
-import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
@@ -11,22 +8,16 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 class BluetoothAudioHelper(
     private val context: Context,
-    private val onPermissionRequired: () -> Unit
+    private val onPermissionRequired: () -> Unit,
 ) {
     private val audioManager: AudioManager? by lazy {
         context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-    }
-
-    // 使用現代方式獲取 BluetoothAdapter 以避免過時警告
-    private val bluetoothAdapter: BluetoothAdapter? by lazy {
-        val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
-        manager?.adapter
     }
 
     private val tag = "BluetoothHelper"
@@ -79,17 +70,6 @@ class BluetoothAudioHelper(
     fun detectBluetoothScoDevice(): AudioDeviceInfo? = detectBluetoothScoDeviceWithStatus().first
 
     /**
-     * 檢查 HFP 耳機是否已連接
-     */
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    fun isHeadsetConnected(): Boolean {
-        if (!checkBluetoothPermission()) return false
-        // 使用 bluetoothAdapter 替代 getDefaultAdapter()
-        val state = bluetoothAdapter?.getProfileConnectionState(BluetoothProfile.HEADSET)
-        return state == BluetoothProfile.STATE_CONNECTED
-    }
-
-    /**
      * 啟動 SCO 鏈路並等待連線
      */
     suspend fun startScoAndWait(timeoutMs: Long = 4000): Boolean {
@@ -137,24 +117,6 @@ class BluetoothAudioHelper(
         try { am.clearCommunicationDevice() } catch (e: Throwable) { Log.e(tag, "clearCommunicationDevice 失敗", e) }
     }
 
-    /**
-     * 檢查 SCO 是否已啟動
-     */
-    fun isScoActive(): Boolean {
-        val am = audioManager ?: return false
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            checkScoActiveModern(am)
-        } else {
-            @Suppress("DEPRECATION")
-            try { am.isBluetoothScoOn } catch (_: Throwable) { false }
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun checkScoActiveModern(am: AudioManager): Boolean {
-        return am.communicationDevice?.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
-    }
-
     // ========== 私有輔助方法 ==========
 
     @Suppress("DEPRECATION")
@@ -166,7 +128,7 @@ class BluetoothAudioHelper(
                 Log.i(tag, "SCO started (legacy)")
                 return true
             }
-            delay(200)
+            delay(200.milliseconds)
         }
         Log.w(tag, "SCO start timeout (legacy)")
         return false
@@ -201,7 +163,7 @@ class BluetoothAudioHelper(
                 Log.i(tag, "SCO started (modern)")
                 return true
             }
-            delay(200)
+            delay(200.milliseconds)
         }
         return false
     }
