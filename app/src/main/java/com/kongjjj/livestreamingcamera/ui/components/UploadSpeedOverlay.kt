@@ -6,11 +6,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.toColorInt
 
 class UploadSpeedOverlay @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
     private var uploadSpeedKbps = 0
@@ -69,10 +70,10 @@ class UploadSpeedOverlay @JvmOverloads constructor(
         canvas.drawText(maxText, x, firstLineY, labelPaint)
 
         // 數字顏色邏輯
-        val numberColor = when {
-            uploadSpeedKbps == 0 -> Color.RED
-            uploadSpeedKbps in 1..1000 -> Color.parseColor("#FFA500") // 橙色
-            uploadSpeedKbps in 1001..2000 -> Color.WHITE
+        val numberColor = when (uploadSpeedKbps) {
+            0 -> Color.RED
+            in 1..1000 -> "#FFA500".toColorInt() // 橙色
+            in 1001..2000 -> Color.WHITE
             else -> Color.GREEN
         }
 
