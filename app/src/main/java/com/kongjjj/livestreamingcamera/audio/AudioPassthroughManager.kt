@@ -23,7 +23,7 @@ class AudioPassthroughManager {
                 sampleRate,
                 channelConfig,
                 audioFormat,
-                bufferSize
+                bufferSize,
             )
             audioRecord?.startRecording()
         } catch (e: SecurityException) {

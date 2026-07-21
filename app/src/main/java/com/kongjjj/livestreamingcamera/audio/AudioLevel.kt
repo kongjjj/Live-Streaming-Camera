@@ -7,7 +7,7 @@ data class AudioLevel(
     val peak: Float = 0f,
     val rmsRight: Float = 0f,
     val peakRight: Float = 0f,
-    val isStereo: Boolean = false
+    val isStereo: Boolean = false,
 ) {
     val rmsDb: Float get() = if (rms > 0.0001f) 20 * log10(rms) else -100f
     val rmsDbRight: Float get() = if (rmsRight > 0.0001f) 20 * log10(rmsRight) else -100f
@@ -15,6 +15,6 @@ data class AudioLevel(
     val normalizedLevelRight: Float get() = (rmsDbRight.coerceIn(-60f, 0f) + 60f) / 60f
 
     companion object {
-        val SILENT = AudioLevel(0f, 0f, 0f, 0f, false)
+        val SILENT = AudioLevel(rms = 0f, peak = 0f, rmsRight = 0f, peakRight = 0f, isStereo = false)
     }
 }
