@@ -30,6 +30,17 @@
         app:showSeekBarValue="true"
         app:useSimpleSummaryProvider="true" />
 
+    <!-- 留言間距滑桿 (0 - 20) -->
+    <SeekBarPreference
+        android:key="chat_line_spacing"
+        android:title="留言間距"
+        android:defaultValue="4"
+        app:min="0"
+        android:max="20"
+        android:stepSize="1"
+        app:showSeekBarValue="true"
+        app:useSimpleSummaryProvider="true" />
+
     <!-- 字型陰影開關 -->
     <SwitchPreference
         android:key="chat_text_shadow_enabled"
