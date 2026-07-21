@@ -5,17 +5,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.filterIsInstance
 
 class MyPersistentService : Service() {
 
@@ -30,25 +28,22 @@ class MyPersistentService : Service() {
     }
 
     private var isStreaming = false
-    private val prefs by lazy { getSharedPreferences("livestream_prefs", Context.MODE_PRIVATE) }
-
-    private val stateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                "com.kongjjj.livestreamingcamera.STREAM_STATE_CHANGED" -> {
-                    isStreaming = intent.getBooleanExtra("is_streaming", false)
-                    updateNotification()
-                }
-            }
-        }
-    }
+    private val prefs by lazy { getSharedPreferences("livestream_prefs", MODE_PRIVATE) }
+    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        // 註冊狀態變化廣播
-        val filter = IntentFilter("com.kongjjj.livestreamingcamera.STREAM_STATE_CHANGED")
-        LocalBroadcastManager.getInstance(this).registerReceiver(stateReceiver, filter)
+        
+        // 監聽狀態變化事件取代 LocalBroadcastManager
+        serviceScope.launch {
+            EventBus.events
+                .filterIsInstance<AppEvent.StreamStateChanged>()
+                .collect { event ->
+                    isStreaming = event.isStreaming
+                    updateNotification()
+                }
+        }
 
         // 讀取當前狀態
         isStreaming = prefs.getBoolean("is_streaming", false)
@@ -64,23 +59,22 @@ class MyPersistentService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_START_STREAM -> {
-                // 發送廣播通知 MainActivity 開始推流
-                LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(ACTION_START_STREAM))
-                // 立即更新狀態（廣播會再更新一次，但先更新本地避免閃爍）
+                // 使用 EventBus 通知 MainActivity 開始推流
+                EventBus.post(AppEvent.StartStream)
+                // 立即更新狀態（事件會再觸發一次更新，但先更新本地避免閃爍）
                 isStreaming = true
                 updateNotification()
             }
             ACTION_STOP_STREAM -> {
-                LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(ACTION_STOP_STREAM))
+                EventBus.post(AppEvent.StopStream)
                 isStreaming = false
                 updateNotification()
             }
             ACTION_EXIT_APP -> {
-                LocalBroadcastManager.getInstance(this).sendBroadcast(Intent(ACTION_EXIT_APP))
+                EventBus.post(AppEvent.ExitApp)
                 // 關閉服務與程式
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
-                // 發送退出廣播後 MainActivity 會處理 finishAffinity()
             }
         }
         return START_STICKY
@@ -180,7 +174,7 @@ class MyPersistentService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(stateReceiver)
+        serviceScope.cancel()
         Log.d(TAG, "背景服務已停止")
     }
 }

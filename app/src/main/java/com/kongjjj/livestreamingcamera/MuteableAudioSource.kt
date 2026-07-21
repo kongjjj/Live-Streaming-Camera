@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class MuteableAudioSource(
     private val delegate: IAudioSourceInternal,
-    private val isMutedProvider: () -> Boolean
+    private val isMutedProvider: () -> Boolean,
 ) : IAudioSourceInternal,
     IAudioFrameSourceInternal,
     SuspendConfigurable<AudioSourceConfig>,
@@ -27,7 +27,7 @@ class MuteableAudioSource(
     Releasable {
 
     private var currentConfig: AudioSourceConfig? = null
-    private val _isStreamingFlow = MutableStateFlow(false)
+    private val _isStreamingFlow = MutableStateFlow(value = false)
     override val isStreamingFlow = _isStreamingFlow.asStateFlow()
 
     override suspend fun configure(config: AudioSourceConfig) {
@@ -67,7 +67,7 @@ class MuteableAudioSource(
             val end = if (currentPos > 0) currentPos else limit
             
             if (end > 0) {
-                if (silentArray == null || silentArray!!.size < end) {
+                if (silentArray == null || (silentArray!!.size < end)) {
                     silentArray = ByteArray(end)
                 }
                 

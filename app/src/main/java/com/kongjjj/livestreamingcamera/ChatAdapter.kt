@@ -16,7 +16,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.toColorInt
-import androidx.lifecycle.lifecycleScope
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -30,10 +30,11 @@ import java.util.Locale
 
 class ChatAdapter(
     private val coroutineScope: CoroutineScope,
-    private val emoteManager: EmoteManager
+    private val emoteManager: EmoteManager,
 ) : ListAdapter<ChatMessage, ChatAdapter.ChatViewHolder>(ChatDiffCallback()) {
 
     private var fontSizeSp = 12f
+    private var itemVerticalPaddingDp = 4
     private var shadowEnabled = true
     private var shadowRadius = 2f
     private var shadowDx = 1f
@@ -45,6 +46,11 @@ class ChatAdapter(
 
     fun setFontSize(sizeSp: Float) {
         fontSizeSp = sizeSp
+        notifyItemRangeChanged(0, itemCount)
+    }
+
+    fun setItemVerticalPadding(paddingDp: Int) {
+        itemVerticalPaddingDp = paddingDp
         notifyItemRangeChanged(0, itemCount)
     }
 
@@ -64,7 +70,7 @@ class ChatAdapter(
         notifyItemRangeChanged(0, itemCount)
     }
 
-    inner class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvTimestamp: TextView = itemView.findViewById(R.id.tv_timestamp)
         val tvSender: TextView = itemView.findViewById(R.id.tv_sender)
         val tvMessage: TextView = itemView.findViewById(R.id.tv_message)
@@ -73,7 +79,7 @@ class ChatAdapter(
             tvMessage.movementMethod = LinkMovementMethod.getInstance()
             tvMessage.isClickable = true
             tvMessage.isLongClickable = true
-            tvMessage.setLinkTextColor(Color.parseColor("#00DDFF"))
+            tvMessage.setLinkTextColor(ContextCompat.getColor(itemView.context, R.color.tiffany_blue))
         }
 
         fun applyShadow(enable: Boolean, radius: Float, dx: Float, dy: Float, color: Int) {
@@ -107,6 +113,9 @@ class ChatAdapter(
         holder.tvSender.textSize = fontSizeSp
         holder.tvMessage.textSize = fontSizeSp
 
+        val paddingPx = (itemVerticalPaddingDp * holder.itemView.context.resources.displayMetrics.density).toInt()
+        holder.itemView.setPadding(holder.itemView.paddingLeft, paddingPx, holder.itemView.paddingRight, paddingPx)
+
         holder.applyShadow(shadowEnabled, shadowRadius, shadowDx, shadowDy, shadowColor)
 
         val timeStr = msg.timestamp?.let { ts ->
@@ -116,7 +125,7 @@ class ChatAdapter(
 
         if (msg.isSystem) {
             holder.tvMessage.text = msg.message
-            holder.tvSender.visibility = View.GONE
+            holder.tvSender.isVisible = false
             holder.tvMessage.setTextColor(Color.LTGRAY)
             return
         }
@@ -127,89 +136,74 @@ class ChatAdapter(
             Color.WHITE
         }
 
-        val spannable = SpannableStringBuilder()
         val spaceWidthPx = (2 * holder.itemView.context.resources.displayMetrics.density).toInt()
+        val spannable = SpannableStringBuilder()
 
-        // Badges
-        for (badge in msg.badges) {
-            val drawableFuture = if (badge.remoteUrl != null) {
-                null // Will be loaded asynchronously
-            } else if (badge.imageResId != 0) {
-                ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
-            } else {
-                null
-            }
-
-            drawableFuture?.let {
-                val textSizePx = holder.tvMessage.textSize
-                val height = textSizePx.toInt()
-                val width = (height * it.intrinsicWidth / it.intrinsicHeight).toInt()
-                it.setBounds(0, 0, width, height)
-                val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
-                spannable.append("\u200B")
-                spannable.setSpan(imageSpan, spannable.length - 1, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.append("\u200B")
-                spannable.setSpan(SpaceSpan(spaceWidthPx), spannable.length - 1, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
+        // --- Badges ---
+        // If not YouTube, all badges go BEFORE the sender
+        // If YouTube, ONLY the platform badge (ic_youtube) goes BEFORE the sender
+        if (!msg.isYouTube) {
+            appendBadges(spannable, msg.badges, holder, spaceWidthPx)
+        } else {
+            val platformBadges = msg.badges.filter { it.name == "youtube" }
+            appendBadges(spannable, platformBadges, holder, spaceWidthPx)
         }
 
-        // 發送者名稱
+        // --- Sender Name ---
         val senderStart = spannable.length
-        spannable.append("${msg.sender}: ")
+        spannable.append(msg.sender)
         spannable.setSpan(ForegroundColorSpan(senderColor), senderStart, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        // 訊息內容（表情圖片：非同步載入並更新）
+        // If YouTube, all OTHER badges go AFTER the sender but BEFORE the colon
+        if (msg.isYouTube) {
+            val otherBadges = msg.badges.filter { it.name != "youtube" }
+            appendBadges(spannable, otherBadges, holder, spaceWidthPx)
+        }
+        spannable.append(": ")
+
+        // --- Message Content ---
         if (msg.segments.isEmpty()) {
             // 若沒有預解析的 segments，直接顯示原始文字（向後相容）
             spannable.append(msg.message)
-            holder.tvSender.visibility = View.GONE
+            holder.tvSender.isVisible = false
             holder.tvMessage.text = spannable
         } else {
             // 先暫存基礎文字，等載入圖片後再更新
             val tempSpannable = SpannableStringBuilder()
             
             // ⬇️ 修復：在 Emote 模式下也要顯示 Badges 和 Sender
-            // 1. Badges
-            for (badge in msg.badges) {
-                val drawable = if (badge.remoteUrl != null) {
-                    null // Will be loaded asynchronously
-                } else if (badge.imageResId != 0) {
-                    ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
-                } else {
-                    null
-                }
-
-                drawable?.let {
-                    val textSizePx = holder.tvMessage.textSize
-                    val height = textSizePx.toInt()
-                    val width = (height * it.intrinsicWidth / it.intrinsicHeight).toInt()
-                    it.setBounds(0, 0, width, height)
-                    val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
-                    tempSpannable.append("\u200B")
-                    tempSpannable.setSpan(imageSpan, tempSpannable.length - 1, tempSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    tempSpannable.append("\u200B")
-                    tempSpannable.setSpan(SpaceSpan(spaceWidthPx), tempSpannable.length - 1, tempSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
+            // 1. Badges (Twitch: All Before; YouTube: Only platform before)
+            if (!msg.isYouTube) {
+                appendBadges(tempSpannable, msg.badges, holder, spaceWidthPx)
+            } else {
+                val platformBadges = msg.badges.filter { it.name == "youtube" }
+                appendBadges(tempSpannable, platformBadges, holder, spaceWidthPx)
             }
+
             // 2. Sender
             val senderStart = tempSpannable.length
-            tempSpannable.append("${msg.sender}: ")
+            tempSpannable.append(msg.sender)
             tempSpannable.setSpan(ForegroundColorSpan(senderColor), senderStart, tempSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-            // 3. Message segments
-            var hasEmote = false
+            // 3. Badges (YouTube: Other badges after name but before colon)
+            if (msg.isYouTube) {
+                val otherBadges = msg.badges.filter { it.name != "youtube" }
+                appendBadges(tempSpannable, otherBadges, holder, spaceWidthPx)
+            }
+            tempSpannable.append(": ")
+
+            // 4. Message segments
             for (segment in msg.segments) {
                 when (segment) {
                     is MessageSegment.Text -> tempSpannable.append(segment.text)
                     is MessageSegment.Emote -> {
-                        hasEmote = true
                         // 用佔位符（如表情名稱）暫時顯示，之後再替換
                         val placeholder = "[${segment.name}]"
                         tempSpannable.append(placeholder)
                     }
                 }
             }
-            holder.tvSender.visibility = View.GONE
+            holder.tvSender.isVisible = false
             holder.tvMessage.text = tempSpannable
 
             // 非同步載入所有表情圖片和網路勳章，完成後取代佔位符
@@ -221,8 +215,8 @@ class ChatAdapter(
                     if (segment is MessageSegment.Emote) {
                         val drawable = emoteDrawableCache[segment.url] ?: run {
                             val loaded = emoteManager.loadImageDrawable(segment.url)
-                            if (loaded != null) {
-                                emoteDrawableCache[segment.url] = loaded
+                            loaded?.let {
+                                emoteDrawableCache[segment.url] = it
                             }
                             loaded
                         }
@@ -235,8 +229,8 @@ class ChatAdapter(
                     if (badge.remoteUrl != null) {
                         val drawable = emoteDrawableCache[badge.remoteUrl] ?: run {
                             val loaded = emoteManager.loadImageDrawable(badge.remoteUrl)
-                            if (loaded != null) {
-                                emoteDrawableCache[badge.remoteUrl] = loaded
+                            loaded?.let {
+                                emoteDrawableCache[badge.remoteUrl] = it
                             }
                             loaded
                         }
@@ -248,35 +242,27 @@ class ChatAdapter(
                     // 重新建立完整的 Spannable (含圖片)
                     val finalSpannable = SpannableStringBuilder()
                     
-                    // 1. Badges (含本地與網路)
-                    for (badge in msg.badges) {
-                        val drawable = if (badge.remoteUrl != null) {
-                            drawableMap[badge.remoteUrl]
-                        } else if (badge.imageResId != 0) {
-                            ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
-                        } else {
-                            null
-                        }
-
-                        drawable?.let {
-                            val textSizePx = holder.tvMessage.textSize
-                            val height = textSizePx.toInt()
-                            val width = (height * it.intrinsicWidth / it.intrinsicHeight).toInt()
-                            it.setBounds(0, 0, width, height)
-                            val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
-                            finalSpannable.append("\u200B")
-                            finalSpannable.setSpan(imageSpan, finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                            finalSpannable.append("\u200B")
-                            finalSpannable.setSpan(SpaceSpan(spaceWidthPx), finalSpannable.length - 1, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        }
+                    // 1. Badges (Twitch: All Before; YouTube: Only platform before)
+                    if (!msg.isYouTube) {
+                        appendBadgesWithAsync(finalSpannable, msg.badges, holder, spaceWidthPx, drawableMap)
+                    } else {
+                        val platformBadges = msg.badges.filter { it.name == "youtube" }
+                        appendBadgesWithAsync(finalSpannable, platformBadges, holder, spaceWidthPx, drawableMap)
                     }
                     
                     // 2. Sender
                     val senderStart = finalSpannable.length
-                    finalSpannable.append("${msg.sender}: ")
+                    finalSpannable.append(msg.sender)
                     finalSpannable.setSpan(ForegroundColorSpan(senderColor), senderStart, finalSpannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-                    // 3. Message segments
+                    // 3. Badges (YouTube: Other badges after name but before colon)
+                    if (msg.isYouTube) {
+                        val otherBadges = msg.badges.filter { it.name != "youtube" }
+                        appendBadgesWithAsync(finalSpannable, otherBadges, holder, spaceWidthPx, drawableMap)
+                    }
+                    finalSpannable.append(": ")
+
+                    // 4. Message segments
                     for (segment in msg.segments) {
                         when (segment) {
                             is MessageSegment.Text -> finalSpannable.append(segment.text)
@@ -288,7 +274,7 @@ class ChatAdapter(
 
                                 val textSizePx = holder.tvMessage.textSize
                                 val height = textSizePx.toInt()
-                                val width = (height * drawable.intrinsicWidth / drawable.intrinsicHeight).coerceAtLeast(1)
+                                val width = ((height * drawable.intrinsicWidth) / drawable.intrinsicHeight).coerceAtLeast(1)
                                 drawable.setBounds(0, 0, width, height)
                                 val imageSpan = ImageSpan(drawable, ImageSpan.ALIGN_BASELINE)
                                 finalSpannable.append("\u200B")
@@ -300,13 +286,65 @@ class ChatAdapter(
                 }
             }
         }
+        holder.tvMessage.setTextColor(Color.WHITE)
+    }
 
-        if (msg.isSystem) {
-            holder.tvMessage.text = msg.message
-            holder.tvSender.visibility = View.GONE
-            holder.tvMessage.setTextColor(Color.LTGRAY)
-        } else {
-            holder.tvMessage.setTextColor(Color.WHITE)
+    private fun appendBadges(
+        spannable: SpannableStringBuilder,
+        badges: List<Badge>,
+        holder: ChatViewHolder,
+        spaceWidthPx: Int,
+    ) {
+        for (badge in badges) {
+            val drawable = if (badge.remoteUrl != null) {
+                null // Will be loaded asynchronously
+            } else if (badge.imageResId != 0) {
+                ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
+            } else {
+                null
+            }
+
+            drawable?.let {
+                val textSizePx = holder.tvMessage.textSize
+                val height = textSizePx.toInt()
+                val width = (height * it.intrinsicWidth) / it.intrinsicHeight
+                it.setBounds(0, 0, width, height)
+                val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
+                spannable.append("\u200B")
+                spannable.setSpan(imageSpan, spannable.length - 1, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.append("\u200B")
+                spannable.setSpan(SpaceSpan(spaceWidthPx), spannable.length - 1, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+    }
+
+    private fun appendBadgesWithAsync(
+        spannable: SpannableStringBuilder,
+        badges: List<Badge>,
+        holder: ChatViewHolder,
+        spaceWidthPx: Int,
+        drawableMap: Map<String, Drawable?>,
+    ) {
+        for (badge in badges) {
+            val drawable = if (badge.remoteUrl != null) {
+                drawableMap[badge.remoteUrl]
+            } else if (badge.imageResId != 0) {
+                ContextCompat.getDrawable(holder.itemView.context, badge.imageResId)
+            } else {
+                null
+            }
+
+            drawable?.let {
+                val textSizePx = holder.tvMessage.textSize
+                val height = textSizePx.toInt()
+                val width = (height * it.intrinsicWidth) / it.intrinsicHeight
+                it.setBounds(0, 0, width, height)
+                val imageSpan = ImageSpan(it, ImageSpan.ALIGN_BASELINE)
+                spannable.append("\u200B")
+                spannable.setSpan(imageSpan, spannable.length - 1, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.append("\u200B")
+                spannable.setSpan(SpaceSpan(spaceWidthPx), spannable.length - 1, spannable.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
         }
     }
 

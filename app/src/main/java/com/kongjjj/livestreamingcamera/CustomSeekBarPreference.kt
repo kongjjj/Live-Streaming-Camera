@@ -2,24 +2,24 @@ package com.kongjjj.livestreamingcamera
 
 import android.content.Context
 import android.util.AttributeSet
-import android.widget.SeekBar
 import android.widget.TextView
+import androidx.core.content.withStyledAttributes
 import androidx.preference.PreferenceViewHolder
 import androidx.preference.SeekBarPreference
 
 class CustomSeekBarPreference @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = androidx.preference.R.attr.seekBarPreferenceStyle
+    defStyleAttr: Int = androidx.preference.R.attr.seekBarPreferenceStyle,
 ) : SeekBarPreference(context, attrs, defStyleAttr) {
 
     private var increment: Int = 1
 
     init {
-        // 從 XML 讀取 app:seekBarIncrement
-        val typedArray = context.obtainStyledAttributes(attrs, R.styleable.CustomSeekBarPreference, defStyleAttr, 0)
-        increment = typedArray.getInt(R.styleable.CustomSeekBarPreference_seekBarIncrement, 1)
-        typedArray.recycle()
+        // 使用 KTX 擴充函式 Context.withStyledAttributes
+        context.withStyledAttributes(attrs, R.styleable.CustomSeekBarPreference, defStyleAttr, 0) {
+            increment = getInt(R.styleable.CustomSeekBarPreference_seekBarIncrement, 1)
+        }
     }
 
     override fun onBindViewHolder(holder: PreferenceViewHolder) {
@@ -39,6 +39,8 @@ class CustomSeekBarPreference @JvmOverloads constructor(
     override fun setValue(value: Int) {
         // 將數值的個位數與十位數歸零 (例如 2375 -> 2300)
         val roundedValue = (value / 100) * 100
+        // 必須使用明確的 super.setValue(int) 呼叫，避免 Kotlin 屬性語法 (super.value = ...) 
+        // 在某些情況下可能誤觸發 overridden setter 導致 StackOverflowError
         super.setValue(roundedValue)
     }
 

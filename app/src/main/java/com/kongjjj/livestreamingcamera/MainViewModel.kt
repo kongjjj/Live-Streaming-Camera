@@ -4,22 +4,24 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.content.Intent
-import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureResult
 import android.media.AudioFormat
-import android.media.MediaFormat
 import android.media.AudioManager
+import android.media.MediaFormat
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.Uri
+import android.net.TrafficStats
+import android.os.Process
 import android.util.Log
 import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.annotation.RequiresPermission
+import androidx.core.content.edit
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -34,39 +36,26 @@ import com.kongjjj.livestreamingcamera.bluetooth.BluetoothAudioSourceFactory
 import com.kongjjj.livestreamingcamera.data.rotation.RotationRepository
 import com.kongjjj.livestreamingcamera.utils.EffectSurfaceProcessor
 import io.github.thibaultbee.streampack.core.configuration.BitrateRegulatorConfig
-import io.github.thibaultbee.streampack.core.elements.sources.audio.IAudioSourceInternal
-import io.github.thibaultbee.streampack.core.elements.sources.video.camera.ICameraSource
-import io.github.thibaultbee.streampack.core.elements.sources.video.camera.CameraSourceFactory
-import io.github.thibaultbee.streampack.core.pipelines.DispatcherProvider
-import io.github.thibaultbee.streampack.core.elements.sources.video.ISurfaceSourceInternal
-import io.github.thibaultbee.streampack.core.elements.sources.video.IVideoSourceInternal
-import io.github.thibaultbee.streampack.core.elements.sources.video.VideoSourceConfig
-import io.github.thibaultbee.streampack.core.interfaces.setCameraId
-import io.github.thibaultbee.streampack.core.interfaces.startStream
-import io.github.thibaultbee.streampack.core.configuration.mediadescriptor.UriMediaDescriptor
 import io.github.thibaultbee.streampack.core.elements.encoders.AudioCodecConfig
 import io.github.thibaultbee.streampack.core.elements.encoders.VideoCodecConfig
+import io.github.thibaultbee.streampack.core.elements.sources.audio.IAudioSourceInternal
+import io.github.thibaultbee.streampack.core.elements.sources.video.camera.ICameraSource
+import io.github.thibaultbee.streampack.core.interfaces.setCameraId
+import io.github.thibaultbee.streampack.core.interfaces.startStream
+import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableAudioEncodingPipelineOutput
+import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableVideoEncodingPipelineOutput
+import io.github.thibaultbee.streampack.core.configuration.mediadescriptor.UriMediaDescriptor
 import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamer
 import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamerAudioCodecConfig
 import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamerAudioConfig
 import io.github.thibaultbee.streampack.core.streamers.dual.DualStreamerVideoConfig
-import io.github.thibaultbee.streampack.core.streamers.dual.IAudioDualStreamer
-import io.github.thibaultbee.streampack.core.streamers.dual.IVideoDualStreamer
-import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableAudioEncodingPipelineOutput
-import io.github.thibaultbee.streampack.core.pipelines.outputs.encoding.IConfigurableVideoEncodingPipelineOutput
-import io.github.thibaultbee.streampack.core.pipelines.inputs.takeJpegSnapshot
-import androidx.documentfile.provider.DocumentFile
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import io.github.thibaultbee.streampack.core.utils.extensions.isClosedException
-import android.net.TrafficStats
-import android.os.Process
-import io.github.thibaultbee.srtdroid.core.models.Stats
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 data class StreamStats(
     val bitrateKbps: Int = 0,
@@ -75,7 +64,7 @@ data class StreamStats(
     val rttMs: Int? = null,
     val lossPercent: Float? = null,
     val sendRateMbps: Float? = null,
-    val endpointType: String = "rtmp"
+    val endpointType: String = "rtmp",
 )
 
 @SuppressLint("MissingPermission")
@@ -92,7 +81,7 @@ class MainViewModel(
     private val defaultDispatcher = Dispatchers.Default
 
     private val isMutedProvider = { _isMutedFlow.value }
-    private val _isMutedFlow = MutableStateFlow(false)
+    private val _isMutedFlow = MutableStateFlow(value = false)
     val isMuted: LiveData<Boolean> = _isMutedFlow.asLiveData()
     internal val endpointTypeKey by lazy { getApplication<Application>().getString(R.string.endpoint_type_key) }
     internal val rtmpUrlKey by lazy { getApplication<Application>().getString(R.string.rtmp_server_url_key) }
@@ -149,7 +138,7 @@ class MainViewModel(
     private fun getSrtMetricValue(metrics: Any, name: String): Any? {
         val cls = srtMetricsClass ?: metrics.javaClass.also { srtMetricsClass = it }
         return try {
-            val getterName = "get${name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.getDefault()) else it.toString() }}"
+            val getterName = "get${name.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }}"
             val method = srtMetricsMethods.getOrPut(getterName) {
                 try { cls.getMethod(getterName) } catch (_: Exception) { null }
             }
@@ -159,9 +148,9 @@ class MainViewModel(
                 val field = srtMetricsFields.getOrPut(name) {
                     cls.getField(name)
                 }
-                field.get(metrics)
+                field[metrics]
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -203,12 +192,12 @@ class MainViewModel(
         get() = streamer.videoInput?.sourceFlow?.value as? ICameraSource
 
     override fun onSharedPreferenceChanged(sharedPreferences: android.content.SharedPreferences?, key: String?) {
-        if (key == endpointTypeKey || key == "video_encoder_key") {
+        if ((key == endpointTypeKey) || (key == "video_encoder_key")) {
             if (isStreaming) {
                 viewModelScope.launch {
                     _toastMessage.postValue("設定已更改，重啟推流以套用...")
                     stopStream()
-                    delay(1000)
+                    delay(1.seconds)
                     startStream()
                 }
             }
@@ -225,7 +214,7 @@ class MainViewModel(
             }
         }
         if (!prefs.contains("video_encoder_key")) {
-            prefs.edit().putString("video_encoder_key", "h264").apply()
+            prefs.edit { putString("video_encoder_key", "h264") }
         }
         setupNetworkMonitoring()
         viewModelScope.launch {
@@ -277,11 +266,9 @@ class MainViewModel(
     }
     private fun updateStreamingState(isStreaming: Boolean) {
         // 儲存狀態到 SharedPreferences
-        prefs.edit().putBoolean("is_streaming", isStreaming).apply()
-        // 發送廣播通知服務
-        val intent = Intent("com.kongjjj.livestreamingcamera.STREAM_STATE_CHANGED")
-        intent.putExtra("is_streaming", isStreaming)
-        LocalBroadcastManager.getInstance(getApplication()).sendBroadcast(intent)
+        prefs.edit { putBoolean("is_streaming", isStreaming) }
+        // 使用 EventBus 發送通知取代 LocalBroadcastManager
+        EventBus.post(AppEvent.StreamStateChanged(isStreaming))
     }
     private suspend fun switchToBuiltInMic() {
         bluetoothHelper.stopSco()
@@ -355,8 +342,8 @@ class MainViewModel(
                                 sendRateMbps = mbpsSendRate.toFloat(),
                                 endpointType = "srt"
                             )
-                        } catch (e: Exception) {
-                            Log.e(TAG, "解析 SRT 統計失敗: ${e.message}")
+                        } catch (_: Exception) {
+                            Log.e(TAG, "解析 SRT 統計失敗")
                             StreamStats(
                                 bitrateKbps = currentBitrate,
                                 uploadSpeedKbps = uploadSpeedKbps,
@@ -374,10 +361,10 @@ class MainViewModel(
                     }
 
                     _streamStats.postValue(stats)
-                } catch (e: Exception) {
-                    Log.e(TAG, "統計收集錯誤", e)
+                } catch (_: Exception) {
+                    Log.e(TAG, "統計收集錯誤")
                 }
-                delay(1000)
+                delay(1.seconds)
             }
         }
     }
@@ -392,8 +379,8 @@ class MainViewModel(
             val encoder = (streamer.first as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
             val getSurfaceMethod = encoder?.let { it::class.java }?.methods?.find { it.name == "getInputSurface" || it.name == "inputSurface" }
             getSurfaceMethod?.invoke(encoder) as? Surface
-        } catch (e: Exception) {
-            Log.e(TAG, "獲取編碼器 Surface 失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "獲取編碼器 Surface 失敗")
             null
         }
     }
@@ -403,8 +390,8 @@ class MainViewModel(
             val encoder = (streamer.second as? IConfigurableVideoEncodingPipelineOutput)?.videoEncoder
             val getSurfaceMethod = encoder?.let { it::class.java }?.methods?.find { it.name == "getInputSurface" || it.name == "inputSurface" }
             getSurfaceMethod?.invoke(encoder) as? Surface
-        } catch (e: Exception) {
-            Log.e(TAG, "獲取錄影編碼器 Surface 失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "獲取錄影編碼器 Surface 失敗")
             null
         }
     }
@@ -438,7 +425,7 @@ class MainViewModel(
                     // 網路恢復後立即重連，取消舊的 retry job 以避免等待
                     streamRetryJob?.cancel()
                     isStreamRetrying = false 
-                    startStreamRetry()
+                    startStreamRetry(isNetworkSwitch = true)
                 }
                 wasStreamingBeforeNetworkLost = false
             }
@@ -446,12 +433,12 @@ class MainViewModel(
 
         try {
             connectivityManager?.registerDefaultNetworkCallback(networkCallback!!)
-        } catch (e: Exception) {
-            Log.e(TAG, "註冊網路回呼失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "註冊網路回呼失敗")
         }
     }
 
-    private fun startStreamRetry() {
+    private fun startStreamRetry(isNetworkSwitch: Boolean = false) {
         if (isStreamRetrying) return
         isStreamRetrying = true
         streamRetryJob = viewModelScope.launch {
@@ -468,11 +455,13 @@ class MainViewModel(
                     }
                     streamer.first.close()
                     
-                    delay(1000) // 給予 OS 更多時間釋放資源並穩定網路路徑
+                    // 網路切換時縮短延遲，加速反應；一般重試則保持較長延遲
+                    val initialDelay = if (isNetworkSwitch && retryCount == 0) 200.milliseconds else 1.seconds
+                    delay(initialDelay)
                     
                     applyCurrentConfig()
                     
-                    val success = withTimeoutOrNull(10000L) {
+                    val success = withTimeoutOrNull(10.seconds) {
                         startStreamInternal(shouldSuppressErrors = true)
                     } ?: false
 
@@ -485,11 +474,11 @@ class MainViewModel(
                         val delayTime = minOf(2000L * (1 shl (minOf(retryCount - 1, 5))), maxDelay)
                         _reconnectingMessage.postValue("連線失敗，${delayTime / 1000}秒後重試...")
                         Log.w(TAG, "重連失敗，等待 $delayTime ms")
-                        delay(delayTime)
+                        delay(delayTime.milliseconds)
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Retry cycle error", e)
-                    delay(5000)
+                } catch (_: Exception) {
+                    Log.e(TAG, "Retry cycle error")
+                    delay(5.seconds)
                 }
             }
             _isTryingConnectionLiveData.postValue(false)
@@ -501,10 +490,10 @@ class MainViewModel(
         // 啟動前強制重新掛載音訊來源並套用配置，解決 RTMP 間中無聲問題
         try {
             applyAudioSource()
-            delay(100) 
+            delay(100.milliseconds) 
             applyCurrentConfig()
-        } catch (e: Exception) {
-            Log.e(TAG, "初始化音訊或配置失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "初始化音訊或配置失敗")
         }
 
         isConfigApplied = true
@@ -533,9 +522,9 @@ class MainViewModel(
             val videoStreamer = streamer.first as? IConfigurableVideoEncodingPipelineOutput
             val audioStreamer = streamer.first as? IConfigurableAudioEncodingPipelineOutput
 
-            val encoderReady = withTimeoutOrNull(5000L) {
+            val encoderReady = withTimeoutOrNull(5.seconds) {
                 while (videoStreamer?.videoEncoder == null || audioStreamer?.audioEncoder == null) {
-                    delay(100)
+                    delay(100.milliseconds)
                 }
                 true
             } ?: false
@@ -550,16 +539,16 @@ class MainViewModel(
 
             val regulatorEnabled = prefs.getBoolean(srtRegulatorEnabledKey, false)
             if (endpointType != "srt" || !regulatorEnabled) {
-                delay(200)
+                delay(200.milliseconds)
                 videoStreamer?.videoEncoder?.bitrate = prefs.getInt(videoBitrateKey, 2000) * 1000
                 Log.d(TAG, "設置固定位元率: ${prefs.getInt(videoBitrateKey, 2000)}kbps")
             }
 
             true
-        } catch (e: Exception) {
-            Log.e(TAG, "推流啟動失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "推流啟動失敗")
             if (!shouldSuppressErrors) {
-                _throwableLiveData.postValue(e)
+                _throwableLiveData.postValue(Exception("推流啟動失敗"))
             }
             false
         }
@@ -608,7 +597,6 @@ class MainViewModel(
     }
 
     val isStreamingLiveData: LiveData<Boolean> = streamer.first.isStreamingFlow.asLiveData()
-    private val _isRecordingLiveData = MutableLiveData<Boolean>(false)
     val isRecordingLiveData: LiveData<Boolean> = streamer.second.isStreamingFlow.asLiveData()
     private val _isTryingConnectionLiveData = MutableLiveData<Boolean>()
     val isTryingConnectionLiveData: LiveData<Boolean> = _isTryingConnectionLiveData
@@ -724,7 +712,7 @@ class MainViewModel(
             resolution = Size(width, height),
             fps = fps
         )
-        Log.d(TAG, "設定影片編碼: $mimeType, 解析度: ${width}x${height}")
+        Log.d(TAG, "設定影片編碼: $mimeType, 解析度: ${width}x$height")
 
         val resolutionChanged = lastAppliedResolution != Size(width, height) || lastAppliedFps != fps
 
@@ -777,27 +765,26 @@ class MainViewModel(
             else -> WhiteBalanceMode.AUTO
         }
         _whiteBalanceMode.value = nextMode
-        viewModelScope.launch { try { cameraSource?.settings?.whiteBalance?.setAutoMode(when (nextMode) {
-            WhiteBalanceMode.AUTO -> CaptureResult.CONTROL_AWB_MODE_AUTO
-            WhiteBalanceMode.INCANDESCENT -> CaptureResult.CONTROL_AWB_MODE_INCANDESCENT
-            WhiteBalanceMode.FLUORESCENT -> CaptureResult.CONTROL_AWB_MODE_FLUORESCENT
-            WhiteBalanceMode.DAYLIGHT -> CaptureResult.CONTROL_AWB_MODE_DAYLIGHT
-            WhiteBalanceMode.CLOUDY -> CaptureResult.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
-        }) } catch (_: Exception) { } }
+        viewModelScope.launch {
+            try {
+                cameraSource?.settings?.whiteBalance?.setAutoMode(
+                    when (nextMode) {
+                        WhiteBalanceMode.AUTO -> CaptureResult.CONTROL_AWB_MODE_AUTO
+                        WhiteBalanceMode.INCANDESCENT -> CaptureResult.CONTROL_AWB_MODE_INCANDESCENT
+                        WhiteBalanceMode.FLUORESCENT -> CaptureResult.CONTROL_AWB_MODE_FLUORESCENT
+                        WhiteBalanceMode.DAYLIGHT -> CaptureResult.CONTROL_AWB_MODE_DAYLIGHT
+                        WhiteBalanceMode.CLOUDY -> CaptureResult.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT
+                    },
+                )
+            } catch (_: Exception) {
+            }
+        }
         return nextMode
     }
 
     fun setExposureCompensation(value: Int) {
         _exposureCompensation.value = value
         viewModelScope.launch { try { cameraSource?.settings?.exposure?.setCompensation(value) } catch (_: Exception) { } }
-    }
-
-    fun adjustExposure(increase: Boolean): Int {
-        val values = listOf(-2, -1, 0, 1, 2)
-        val nextValue = values[(values.indexOf(_exposureCompensation.value ?: 0) + (if (increase) 1 else -1) + values.size) % values.size]
-        _exposureCompensation.value = nextValue
-        viewModelScope.launch { try { cameraSource?.settings?.exposure?.setCompensation(nextValue) } catch (_: Exception) { } }
-        return nextValue
     }
 
     fun toggleFocusMode(): FocusMode {
@@ -896,12 +883,19 @@ class MainViewModel(
                 if (streamer.second.isStreamingFlow.value) {
                     try {
                         Log.d(TAG, "正在停止錄影...")
-                        streamer.second.stopStream()
-                        streamer.second.close()
+                        withTimeout(5000L) {
+                            streamer.second.stopStream()
+                            streamer.second.close()
+                        }
                         _toastMessage.postValue("錄影已停止")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to stop recording", e)
-                        _toastMessage.postValue("停止錄影失敗: ${e.message}")
+                    } catch (e: TimeoutCancellationException) {
+                        Log.e(TAG, "Stop recording timed out", e)
+                        _toastMessage.postValue("停止錄影超時，請檢查檔案")
+                        // 強制關閉管道以防萬一
+                        try { streamer.second.close() } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                        Log.e(TAG, "Failed to stop recording")
+                        _toastMessage.postValue("停止錄影失敗")
                     }
                 } else {
                     val storageUriString = prefs.getString(getApplication<Application>().getString(R.string.file_name_key), null)
@@ -912,7 +906,7 @@ class MainViewModel(
 
                     try {
                         Log.d(TAG, "正在開始錄影...")
-                        val storageUri = Uri.parse(storageUriString)
+                        val storageUri = storageUriString.toUri()
                         val directory = DocumentFile.fromTreeUri(getApplication(), storageUri)
                         if (directory == null || !directory.canWrite()) {
                             _toastMessage.postValue("儲存位置無法寫入")
@@ -941,9 +935,9 @@ class MainViewModel(
                         // 啟動後輪詢並禁用錄影 Pipe 的特效 (影相錄影不使用特效)
                         viewModelScope.launch {
                             repeat(10) { i ->
-                                delay(500)
+                                delay(500.milliseconds)
                                 getRecordEncoderInputSurface()?.let { surface ->
-                                    effectProcessor?.setSurfaceEffectEnabled(surface, false)
+                                    effectProcessor?.setSurfaceEffectEnabled(surface, enabled = false)
                                     Log.d(TAG, "已為錄影 Surface 禁用特效 (嘗試 $i): $surface")
                                     return@launch
                                 }
@@ -952,14 +946,14 @@ class MainViewModel(
                         }
 
                         _toastMessage.postValue("錄影開始: $fileName")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to start recording", e)
-                        _toastMessage.postValue("開始錄影失敗: ${e.message}")
+                    } catch (_: Exception) {
+                        Log.e(TAG, "Failed to start recording")
+                        _toastMessage.postValue("開始錄影失敗")
                     }
                 }
             } finally {
                 // 減少延遲，讓按鈕更靈敏，但仍防止連擊
-                delay(500)
+                delay(500.milliseconds)
                 isRecordingActionPending = false
                 Log.d(TAG, "toggleRecording: action pending cleared")
             }

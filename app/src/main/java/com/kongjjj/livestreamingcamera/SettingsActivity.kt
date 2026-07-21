@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.edit
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreference
@@ -38,10 +39,12 @@ class SettingsActivity : AppCompatActivity() {
                 val context = requireContext()
                 context.contentResolver.takePersistableUriPermission(
                     it,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                 )
                 val prefKey = getString(R.string.file_name_key)
-                preferenceManager.sharedPreferences?.edit()?.putString(prefKey, it.toString())?.apply()
+                preferenceManager.sharedPreferences?.edit {
+                    putString(prefKey, it.toString())
+                }
                 findPreference<Preference>(prefKey)?.summary = it.path
             }
         }
@@ -66,7 +69,9 @@ class SettingsActivity : AppCompatActivity() {
                         .setMessage("更改端點後，程式將會重新啟動。確定要繼續嗎？")
                         .setPositiveButton("確定") { _, _ ->
                             // 使用 SharedPreferences 強制即時儲存（commit），確保重啟後讀取正確
-                            preference.sharedPreferences?.edit()?.putString(preference.key, newValue as String)?.commit()
+                            preference.sharedPreferences?.edit(commit = true) {
+                                putString(preference.key, newValue as String)
+                            }
                             restartApp()
                         }
                         .setNegativeButton("取消", null)
@@ -150,22 +155,22 @@ class SettingsActivity : AppCompatActivity() {
 
                 val jsonObject = JSONObject(stringBuilder.toString())
                 val prefs = preferenceManager.sharedPreferences ?: return
-                val editor = prefs.edit()
-                editor.clear() // 清除目前所有設定
+                
+                prefs.edit(commit = true) {
+                    clear() // 清除目前所有設定
 
-                val keys = jsonObject.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val value = jsonObject.get(key)
-                    when (value) {
-                        is Boolean -> editor.putBoolean(key, value)
-                        is Float -> editor.putFloat(key, value)
-                        is Int -> editor.putInt(key, value)
-                        is Long -> editor.putLong(key, value)
-                        is String -> editor.putString(key, value)
+                    val keys = jsonObject.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        when (val value = jsonObject[key]) {
+                            is Boolean -> putBoolean(key, value)
+                            is Float -> putFloat(key, value)
+                            is Int -> putInt(key, value)
+                            is Long -> putLong(key, value)
+                            is String -> putString(key, value)
+                        }
                     }
                 }
-                editor.commit()
 
                 androidx.appcompat.app.AlertDialog.Builder(context)
                     .setTitle("匯入成功")

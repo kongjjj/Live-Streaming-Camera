@@ -6,7 +6,7 @@ import io.github.thibaultbee.streampack.core.elements.sources.audio.IAudioSource
 
 class MuteableAudioSourceFactory(
     private val delegateFactory: IAudioSourceInternal.Factory,
-    private val isMutedProvider: () -> Boolean
+    private val isMutedProvider: () -> Boolean,
 ) : IAudioSourceInternal.Factory {
     override suspend fun create(context: Context): IAudioSourceInternal {
         val delegate = delegateFactory.create(context)

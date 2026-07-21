@@ -10,5 +10,5 @@ object ApplicationConstants {
      * Default application orientation.
      * Also set in `AndroidManifest.xml` `android:screenOrientation` attribute.
      */
-    const val supportedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+    const val SUPPORTED_ORIENTATION = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 }

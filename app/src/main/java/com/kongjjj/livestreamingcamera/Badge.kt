@@ -5,7 +5,7 @@ import androidx.annotation.DrawableRes
 data class Badge(
     val name: String,
     val version: String,
-    @DrawableRes val imageResId: Int,
+    @get:DrawableRes val imageResId: Int,
     val remoteUrl: String? = null // 新增：支援網路圖片勳章（如 YouTube 會員勳章）
 )
 

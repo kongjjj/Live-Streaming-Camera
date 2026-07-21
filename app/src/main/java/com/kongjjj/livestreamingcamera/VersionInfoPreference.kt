@@ -2,8 +2,6 @@ package com.kongjjj.livestreamingcamera
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.View
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.preference.Preference
 import androidx.preference.PreferenceViewHolder
@@ -11,7 +9,7 @@ import androidx.preference.PreferenceViewHolder
 class VersionInfoPreference @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = androidx.preference.R.attr.preferenceStyle
+    defStyleAttr: Int = androidx.preference.R.attr.preferenceStyle,
 ) : Preference(context, attrs, defStyleAttr) {
 
     init {
@@ -31,12 +29,13 @@ class VersionInfoPreference @JvmOverloads constructor(
             val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 pInfo.longVersionCode.toString()
             } else {
+                @Suppress("DEPRECATION")
                 pInfo.versionCode.toString()
             }
             holder.findViewById(R.id.version_value)?.let { (it as TextView).text = versionName }
             holder.findViewById(R.id.build_value)?.let { (it as TextView).text = versionCode }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
+            // ignore
         }
     }
 }

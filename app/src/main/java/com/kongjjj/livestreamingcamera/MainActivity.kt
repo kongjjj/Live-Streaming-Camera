@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
@@ -24,7 +23,6 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.LinearLayout
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,7 +43,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.kongjjj.livestreamingcamera.databinding.ActivityMainBinding
 import com.kongjjj.livestreamingcamera.models.AudioLevelFlow
 import com.kongjjj.livestreamingcamera.audio.AudioLevel
-import com.kongjjj.livestreamingcamera.ui.NetworkSignalOverlay
 import com.kongjjj.livestreamingcamera.utils.PermissionsManager
 import com.kongjjj.livestreamingcamera.utils.showDialog
 import com.kongjjj.livestreamingcamera.utils.toast
@@ -71,13 +68,14 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.kongjjj.livestreamingcamera.getBadgeImageRes
 import com.kongjjj.livestreamingcamera.tts.TTSManager
+import io.github.thibaultbee.streampack.ui.views.PreviewView
 import kotlinx.coroutines.channels.Channel
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 @SuppressLint("MissingPermission")
-class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener, io.github.thibaultbee.streampack.ui.views.PreviewView.Listener {
+class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener, PreviewView.Listener {
 
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MainViewModel by viewModels {
@@ -86,9 +84,9 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private val backPressedCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
-            if (binding.customMenuPanel.visibility == View.VISIBLE) {
+            if (binding.customMenuPanel.isVisible) {
                 hideCustomMenu()
-            } else if (binding.settingsContainer.visibility == View.VISIBLE) {
+            } else if (binding.settingsContainer.isVisible) {
                 toggleSettingsPanel()
             }
         }
@@ -162,8 +160,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             field = value
             updateChatButtonIcon()
             prefs.edit { putBoolean(chatEnabledKey, value) }
-            binding.chatRecyclerView.visibility = if (value) View.VISIBLE else View.GONE
-            if (value) {
+            binding.chatRecyclerView.isVisible = value
+            if (isChatEnabled) {
                 startChatRetryLoop()
                 startYouTubeChat()
             } else {
@@ -214,7 +212,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         this,
         streamerRequiredPermissions,
         onAllGranted = { onPermissionsGranted() },
-        onShowPermissionRationale = { permissions, onRequiredPermissionLastTime ->
+        onShowPermissionRationale = { _, onRequiredPermissionLastTime ->
             showDialog(
                 title = "權限說明",
                 message = "需要授予相機與錄音權限才能推流，位置與電話狀態權限則用於顯示訊號強度。",
@@ -276,7 +274,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     private var isButtonsCollapsed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        requestedOrientation = ApplicationConstants.SUPPORTED_ORIENTATION
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -342,7 +340,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             addAction(MyPersistentService.ACTION_STOP_STREAM)
             addAction(MyPersistentService.ACTION_EXIT_APP)
         }
-        LocalBroadcastManager.getInstance(this).registerReceiver(serviceCommandReceiver, filter)
+        ContextCompat.registerReceiver(this, serviceCommandReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
         viewModel.isStreamingLiveData.observe(this) { updateStatusText() }
         viewModel.isTryingConnectionLiveData.observe(this) { updateStatusText() }
@@ -357,6 +355,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
         ttsManager = TTSManager(this)
         updateChatFontSize()
+        updateChatLineSpacing()
         updateStatusText()
         updateOverlayVisibility()  // 根據偏好設定初始可見性
     }
@@ -439,11 +438,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         // 當只有一個或沒有後置鏡頭時，隱藏按鈕列
         if (backCameras.size <= 1) {
-            cameraButtonsContainer.visibility = View.GONE
+            cameraButtonsContainer.isVisible = false
             return
         }
 
-        cameraButtonsContainer.visibility = View.VISIBLE
+        cameraButtonsContainer.isVisible = true
 
         for (camera in backCameras) {
             val button = android.widget.Button(this).apply {
@@ -506,7 +505,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
             val response = httpClient.newCall(request).execute()
             if (response.isSuccessful) {
-                val json = JSONObject(response.body?.string() ?: "{}")
+                val json = JSONObject(response.body.string())
                 val data = json.optJSONObject("data")
                 val user = data?.optJSONObject("user")
                 val stream = user?.optJSONObject("stream")
@@ -526,8 +525,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             } else {
                 StreamInfo(0, null)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "獲取直播資訊失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "獲取直播資訊失敗")
             StreamInfo(0, null)
         }
     }
@@ -546,13 +545,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 if (channelName.isNotBlank() && channelName != "yourchannel") {
                     var streamInfo: StreamInfo? = null
                     try {
-                        streamInfo = withTimeout(5000L) {
+                        streamInfo = withTimeout(5.seconds) {
                             withContext(Dispatchers.IO) { fetchStreamInfo(channelName) }
                         }
-                    } catch (e: TimeoutCancellationException) {
-                        Log.w(TAG, "直播資訊請求超時", e)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "直播資訊請求異常", e)
+                    } catch (_: TimeoutCancellationException) {
+                        Log.w(TAG, "直播資訊請求超時")
+                    } catch (_: Exception) {
+                        Log.e(TAG, "直播資訊請求異常")
                     }
 
                     withContext(Dispatchers.Main) {
@@ -569,38 +568,38 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                                 // 頻道離線，清除開始時間
                                 streamStartTime = null
                                 stopUptimeUpdates()
-                                binding.uptimeText.visibility = View.GONE
+                                binding.uptimeText.isVisible = false
                             }
 
                             // 處理觀看人數顯示
                             if (!isBlackOverlayVisible) {
                                 if (viewers > 0) {
                                     binding.viewerCountText.text = viewers.toString()
-                                    binding.viewerCountLayout.visibility = View.VISIBLE
+                                    binding.viewerCountLayout.isVisible = true
                                 } else {
-                                    binding.viewerCountLayout.visibility = View.GONE
+                                    binding.viewerCountLayout.isVisible = false
                                 }
                             } else {
                                 binding.viewerCountText.text = viewers.toString()
-                                binding.viewerCountLayout.visibility = View.GONE
+                                binding.viewerCountLayout.isVisible = false
                             }
                         } else {
                             // 請求失敗，不清除 streamStartTime，僅隱藏觀看人數（保持時長繼續計時）
-                            binding.viewerCountLayout.visibility = View.GONE
+                            binding.viewerCountLayout.isVisible = false
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        binding.viewerCountLayout.visibility = View.GONE
+                        binding.viewerCountLayout.isVisible = false
                         // 頻道名稱無效時，清除開始時間
                         if (streamStartTime != null) {
                             streamStartTime = null
                             stopUptimeUpdates()
-                            binding.uptimeText.visibility = View.GONE
+                            binding.uptimeText.isVisible = false
                         }
                     }
                 }
-                delay(15000) // 15 秒更新一次
+                delay(15.seconds) // 15 秒更新一次
             }
         }
     }
@@ -626,15 +625,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                         binding.uptimeText.text = uptimeString
                         // 關鍵修改：只有在非黑屏模式且直播進行中才顯示
                         if (!isBlackOverlayVisible && streamStartTime != null) {
-                            binding.uptimeText.visibility = View.VISIBLE
+                            binding.uptimeText.isVisible = true
                         } else {
-                            binding.uptimeText.visibility = View.GONE
+                            binding.uptimeText.isVisible = false
                         }
                     } else {
-                        binding.uptimeText.visibility = View.GONE
+                        binding.uptimeText.isVisible = false
                     }
                 }
-                delay(1000)
+                delay(1.seconds)
             }
         }
     }
@@ -675,6 +674,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             showUploadSpeedKey -> updateOverlayVisibility()
             showBatteryKey, showNetworkSignalKey -> updateOverlayVisibility()
             "chat_font_size" -> updateChatFontSize()
+            "chat_line_spacing" -> updateChatLineSpacing()
             chatShadowEnabledKey -> updateChatShadow()
             chatShadowRadiusKey -> updateChatShadowRadius()
             chatShadowDistanceKey -> updateChatShadowDistance()
@@ -723,6 +723,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         chatAdapter.setFontSize(fontSize)
     }
 
+    private fun updateChatLineSpacing() {
+        val paddingDp = prefs.getInt("chat_line_spacing", 4)
+        chatAdapter.setItemVerticalPadding(paddingDp)
+    }
+
     /**
      * 根據偏好設定更新電池與網路訊號 Overlay 的可見性（需考慮黑屏模式）
      */
@@ -735,12 +740,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val showRotation = prefs.getBoolean(showTiltKey, false)
 
         val showUploadSpeed = prefs.getBoolean(showUploadSpeedKey, false)
-        binding.batteryOverlay.visibility = if (showBattery) View.VISIBLE else View.GONE
-        binding.networkSignalOverlay.visibility = if (showNetwork) View.VISIBLE else View.GONE
-        binding.shakeLevelOverlay.visibility = if (showShake) View.VISIBLE else View.GONE
-        binding.audioLevelOverlay.visibility = if (showAudio) View.VISIBLE else View.GONE
-        binding.rotationOverlay.visibility = if (showRotation) View.VISIBLE else View.GONE
-        binding.uploadSpeedOverlay.visibility = if (showUploadSpeed) View.VISIBLE else View.GONE
+        binding.batteryOverlay.isVisible = showBattery
+        binding.networkSignalOverlay.isVisible = showNetwork
+        binding.shakeLevelOverlay.isVisible = showShake
+        binding.audioLevelOverlay.isVisible = showAudio
+        binding.rotationOverlay.isVisible = showRotation
+        binding.uploadSpeedOverlay.isVisible = showUploadSpeed
     }
 
     private fun setupBluetoothButton() {
@@ -774,8 +779,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
             var safeZoom = zoomRatio.coerceIn(min, max)
             if (step > 0) {
-                val steps = Math.round((safeZoom - min) / step)
-                safeZoom = min + steps * step
+                val steps = kotlin.math.round((safeZoom - min) / step).toLong()
+                safeZoom = min + steps.toFloat() * step
             }
             // 再次限制範圍，防止浮點數誤差
             safeZoom = safeZoom.coerceIn(min, max)
@@ -789,8 +794,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun setupZoomButton() {
         binding.zoomButton.setOnClickListener {
-            val isVisible = binding.zoomSliderContainer.visibility == View.VISIBLE
-            binding.zoomSliderContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
+            val isVisible = binding.zoomSliderContainer.isVisible
+            binding.zoomSliderContainer.isVisible = !isVisible
             if (!isVisible) {
                 // 初始化 Slider 值
                 lifecycleScope.launch {
@@ -803,8 +808,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onZoomRationOnPinchChanged(zoomRatio: Float) {
         runOnUiThread {
-            if (binding.zoomSliderContainer.visibility != View.VISIBLE) {
-                binding.zoomSliderContainer.visibility = View.VISIBLE
+            if (!binding.zoomSliderContainer.isVisible) {
+                binding.zoomSliderContainer.isVisible = true
             }
         }
         updateZoomSlider(zoomRatio)
@@ -812,7 +817,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun setupSliders() {
         binding.zoomSlider.addOnChangeListener { _, value, fromUser ->
-            binding.zoomValueText.text = String.format(Locale.US, "變焦: %.1fx", value)
+            binding.zoomValueText.text = getString(R.string.zoom_format, value)
             if (fromUser) {
                 lifecycleScope.launch {
                     viewModel.setZoomRatio(value)
@@ -822,7 +827,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         binding.exposureSlider.addOnChangeListener { _, value, fromUser ->
             val exposureValue = value.toInt()
-            binding.exposureValueText.text = "曝光: ${if (exposureValue > 0) "+$exposureValue" else exposureValue}"
+            binding.exposureValueText.text = if (exposureValue > 0) {
+                getString(R.string.exposure_plus_format, exposureValue)
+            } else {
+                getString(R.string.exposure_format, exposureValue)
+            }
             if (fromUser) {
                 viewModel.setExposureCompensation(exposureValue)
             }
@@ -848,7 +857,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         } else {
             prefs.getString("selected_rtmp_url", "1") ?: "1"
         }
-        val typeText = if (endpointType == "srt") "SRT $urlIndex" else "RTMP $urlIndex"
+        val typeText = if (endpointType == "srt") {
+            getString(R.string.srt_format, urlIndex)
+        } else {
+            getString(R.string.rtmp_format, urlIndex)
+        }
         val statusText = when {
             viewModel.isStreamingLiveData.value == true -> getString(R.string.streaming)
             viewModel.isTryingConnectionLiveData.value == true -> getString(R.string.connecting)
@@ -925,8 +938,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         try {
             connectivityManager?.registerNetworkCallback(builder.build(), networkCallback!!)
-        } catch (e: Exception) {
-            Log.e(TAG, "註冊網路回呼失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "註冊網路回呼失敗")
             networkCallback = null
         }
     }
@@ -977,7 +990,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 Log.e(TAG, "Recent messages API 請求失敗: ${response.code}")
                 return@withContext emptyList()
             }
-            val jsonStr = response.body?.string() ?: ""
+            val body = response.body
+            val jsonStr = body.string()
             if (jsonStr.isBlank()) return@withContext emptyList()
 
             val json = JSONObject(jsonStr)
@@ -1005,8 +1019,8 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                 lastReceivedTimestamp = maxTimestamp
             }
             recentList
-        } catch (e: Exception) {
-            Log.e(TAG, "獲取最近訊息失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "獲取最近訊息失敗")
             emptyList()
         }
     }
@@ -1018,7 +1032,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         var tagsMap = emptyMap<String, String>()
         var restOfMessage = raw
-        var emotesTag: String? = null          // ⬅️ 新增：儲存 emotes 標籤
+        var emotesTag: String? = null
 
         if (raw.startsWith("@")) {
             val parts = raw.split(" ", limit = 2)
@@ -1029,11 +1043,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                     val kv = it.split("=", limit = 2)
                     if (kv.size == 2) kv[0] to kv[1] else "" to ""
                 }.filterKeys { it.isNotEmpty() }
+                
+                // 取出 emotes 標籤
+                emotesTag = tagsMap["emotes"]
             }
         }
-
-        // 取出 emotes 標籤
-        emotesTag = tagsMap["emotes"]   // ⬅️ 新增
 
         var messageId = tagsMap["id"] ?: UUID.randomUUID().toString()
         val displayName = tagsMap["display-name"] ?: ""
@@ -1101,7 +1115,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         loadMessageHistory = prefs.getBoolean(loadMessageHistoryKey, true)
         loadMessageHistoryOnReconnect = prefs.getBoolean(loadMessageHistoryOnReconnectKey, true)
         updateChatButtonIcon()
-        binding.chatRecyclerView.visibility = if (isChatEnabled) View.VISIBLE else View.GONE
+        binding.chatRecyclerView.isVisible = isChatEnabled
         binding.chatButton.setOnClickListener { isChatEnabled = !isChatEnabled }
     }
 
@@ -1117,8 +1131,16 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         chatUpdateJob?.cancel()
         chatUpdateJob = lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                for (u in chatUpdateChannel) {
-                    delay(100) // Batch period
+                while (isActive) {
+                    chatUpdateChannel.receive()
+                    delay(100.milliseconds) // Batch period
+                    
+                    // Consume any pending updates in the conflated channel
+                    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+                    while (!chatUpdateChannel.isEmpty) {
+                        chatUpdateChannel.tryReceive()
+                    }
+
                     val atBottom = isAtBottom()
                     val currentList = synchronized(chatMessages) { chatMessages.toList() }
 
@@ -1162,41 +1184,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     private fun stopYouTubeChat() {
         youtubeChatManager.stop()
-    }
-
-    private fun extractVideoId(input: String): String {
-        if (input.isBlank()) return ""
-        val trimmed = input.trim()
-        Log.d(TAG, "Extracting Video ID from input: $trimmed")
-
-        // 1. Check for standard watch URL (youtube.com/watch?v=...)
-        if (trimmed.contains("v=")) {
-            val parts = trimmed.split("v=")
-            if (parts.size > 1) {
-                val idPart = parts[1].substringBefore("&").substringBefore("?")
-                if (idPart.length >= 11) {
-                    val id = idPart.take(11)
-                    Log.d(TAG, "Extracted ID from v= parameter: $id")
-                    return id
-                }
-            }
-        }
-
-        // 2. Check for short URL (youtu.be/...) or live URL (youtube.com/live/...)
-        if (trimmed.contains("youtu.be/") || trimmed.contains("youtube.com/live/")) {
-            val idPart = trimmed.substringAfterLast("/").substringBefore("?").substringBefore("&")
-            if (idPart.length >= 11) {
-                val id = idPart.take(11)
-                Log.d(TAG, "Extracted ID from path: $id")
-                return id
-            }
-        }
-
-        // 3. Assume it's a raw Video ID
-        // YouTube IDs are typically 11 characters
-        val rawId = trimmed.substringBefore("?").substringBefore("&")
-        Log.d(TAG, "Assuming raw Video ID: $rawId")
-        return rawId
     }
 
     private fun handleNewChatMessage(msg: ChatMessage) {
@@ -1251,7 +1238,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
                     break
                 }
                 connectIrc()
-                delay(5000)
+                delay(5.seconds)
             }
         }
     }
@@ -1293,7 +1280,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
                 isWebSocketConnected = true
                 stopChatRetry()
-                showSystemMessage("成功連線到聊天室")
+                showSystemMessage("成功連線到 $connectingChannel 的聊天室")
 
                 // 再次確認目前頻道是否與連線時相同，避免舊連線覆蓋新頻道
                 if (channel != connectingChannel) {
@@ -1473,15 +1460,15 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             if (chatMessages.isNotEmpty()) {
                 lastMessageId = chatMessages.last().id
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "讀取聊天歷史失敗", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "讀取聊天歷史失敗")
         }
     }
 
     fun toggleSettingsPanel() {
         val container = binding.settingsContainer
-        if (container.visibility == View.VISIBLE) {
-            container.visibility = View.GONE
+        if (container.isVisible) {
+            container.isVisible = false
             backPressedCallback.isEnabled = false
         } else {
             showSidePanel(TwitchChatSettingsFragment())
@@ -1492,11 +1479,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         val container = binding.settingsContainer
         val current = supportFragmentManager.findFragmentById(R.id.settingsContainer)
         
-        if (container.visibility == View.VISIBLE && current?.javaClass == fragment.javaClass) {
-            container.visibility = View.GONE
+        if (container.isVisible && current?.javaClass == fragment.javaClass) {
+            container.isVisible = false
             backPressedCallback.isEnabled = false
         } else {
-            container.visibility = View.VISIBLE
+            container.isVisible = true
             backPressedCallback.isEnabled = true
             supportFragmentManager.beginTransaction()
                 .replace(R.id.settingsContainer, fragment)
@@ -1525,16 +1512,16 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     }
 
     private fun showCustomMenu() {
-        binding.customMenuScrim.visibility = View.VISIBLE
-        binding.customMenuPanel.visibility = View.VISIBLE
+        binding.customMenuScrim.isVisible = true
+        binding.customMenuPanel.isVisible = true
         backPressedCallback.isEnabled = true
     }
 
     private fun hideCustomMenu() {
-        binding.customMenuScrim.visibility = View.GONE
-        binding.customMenuPanel.visibility = View.GONE
+        binding.customMenuScrim.isVisible = false
+        binding.customMenuPanel.isVisible = false
         // 只有當設定面板也關閉時，才禁用 backPressedCallback
-        if (binding.settingsContainer.visibility != View.VISIBLE) {
+        if (!binding.settingsContainer.isVisible) {
             backPressedCallback.isEnabled = false
         }
     }
@@ -1578,20 +1565,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.blackScreenButton.setOnClickListener { toggleBlackOverlay() }
 
         binding.cameraSettingButton.setOnClickListener {
-            if (binding.hiddenCameraControls.visibility == View.VISIBLE) {
-                binding.hiddenCameraControls.visibility = View.GONE
-                // 移除這裡對拉桿容器的隱藏邏輯
-            } else {
-                binding.hiddenCameraControls.visibility = View.VISIBLE
-            }
+            binding.hiddenCameraControls.isVisible = !binding.hiddenCameraControls.isVisible
         }
 
         binding.effectsMenuButton.setOnClickListener {
-            binding.hiddenEffectControls.visibility = if (binding.hiddenEffectControls.visibility == View.VISIBLE) {
-                View.GONE
-            } else {
-                View.VISIBLE
-            }
+            binding.hiddenEffectControls.isVisible = !binding.hiddenEffectControls.isVisible
         }
 
         binding.flashButton.setOnClickListener {
@@ -1605,23 +1583,27 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             val newMode = viewModel.cycleWhiteBalance()
             updateWhiteBalanceButton()
             val modeName = when (newMode) {
-                MainViewModel.WhiteBalanceMode.AUTO -> "自動"
-                MainViewModel.WhiteBalanceMode.INCANDESCENT -> "白熾燈"
-                MainViewModel.WhiteBalanceMode.FLUORESCENT -> "螢光燈"
-                MainViewModel.WhiteBalanceMode.DAYLIGHT -> "日光"
-                MainViewModel.WhiteBalanceMode.CLOUDY -> "多雲"
+                MainViewModel.WhiteBalanceMode.AUTO -> getString(R.string.wb_auto)
+                MainViewModel.WhiteBalanceMode.INCANDESCENT -> getString(R.string.wb_incandescent)
+                MainViewModel.WhiteBalanceMode.FLUORESCENT -> getString(R.string.wb_fluorescent)
+                MainViewModel.WhiteBalanceMode.DAYLIGHT -> getString(R.string.wb_daylight)
+                MainViewModel.WhiteBalanceMode.CLOUDY -> getString(R.string.wb_cloudy)
             }
-            toast("白平衡: $modeName")
+            toast(getString(R.string.wb_toast_format, modeName))
         }
         viewModel.whiteBalanceMode.observe(this) { updateWhiteBalanceButton() }
 
         binding.exposureButton.setOnClickListener {
-            val isVisible = binding.exposureSliderContainer.visibility == View.VISIBLE
-            binding.exposureSliderContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
+            val isVisible = binding.exposureSliderContainer.isVisible
+            binding.exposureSliderContainer.isVisible = !isVisible
             if (!isVisible) {
                 val currentExposure = viewModel.exposureCompensation.value ?: 0
                 binding.exposureSlider.value = currentExposure.toFloat()
-                binding.exposureValueText.text = "曝光: ${if (currentExposure > 0) "+$currentExposure" else currentExposure}"
+                binding.exposureValueText.text = if (currentExposure > 0) {
+                    getString(R.string.exposure_plus_format, currentExposure)
+                } else {
+                    getString(R.string.exposure_format, currentExposure)
+                }
             }
         }
         viewModel.exposureCompensation.observe(this) { updateExposureButton() }
@@ -1630,11 +1612,11 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             val newMode = viewModel.toggleFocusMode()
             updateFocusButton()
             val modeName = when (newMode) {
-                MainViewModel.FocusMode.CONTINUOUS -> "連續"
-                MainViewModel.FocusMode.AUTO -> "自動"
-                MainViewModel.FocusMode.MACRO -> "微距"
+                MainViewModel.FocusMode.CONTINUOUS -> getString(R.string.focus_continuous)
+                MainViewModel.FocusMode.AUTO -> getString(R.string.focus_auto)
+                MainViewModel.FocusMode.MACRO -> getString(R.string.focus_macro)
             }
-            toast("對焦: $modeName")
+            toast(getString(R.string.focus_toast_format, modeName))
         }
         viewModel.focusMode.observe(this) { updateFocusButton() }
 
@@ -1692,7 +1674,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
         viewModel.isSplitThree.observe(this) { isEnabled ->
             binding.splitThreeButton.alpha = if (isEnabled) 1.0f else 0.5f
-            binding.splitThreeOverlay.visibility = if (isEnabled) View.VISIBLE else View.GONE
+            binding.splitThreeOverlay.isVisible = isEnabled
         }
     }
 
@@ -1707,7 +1689,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             applyStatusBarVisibility()
             // 如果當前是收合狀態，需重新套用收合位置（不帶動畫）
             if (isButtonsCollapsed) {
-                applyButtonsCollapsedState(false)
+                applyButtonsCollapsedState()
             }
         } else {
             binding.blackOverlay.isVisible = true
@@ -1740,13 +1722,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.cameraSettingButton.animate().translationX(step * 4).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).start()
         binding.blackScreenButton.animate().translationX(step * 5).alpha(0f).scaleX(0f).scaleY(0f).setDuration(300).withEndAction {
             android.transition.TransitionManager.beginDelayedTransition(binding.root)
-            setButtonsVisibility(View.GONE)
+            setButtonsVisible(false)
         }.start()
     }
 
     private fun expandButtons() {
         android.transition.TransitionManager.beginDelayedTransition(binding.root)
-        setButtonsVisibility(View.VISIBLE)
+        setButtonsVisible(true)
 
         binding.chatButton.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
         binding.recordButton.animate().translationY(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
@@ -1758,59 +1740,49 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.blackScreenButton.animate().translationX(0f).alpha(1f).scaleX(1f).scaleY(1f).setDuration(300).start()
     }
 
-    private fun applyButtonsCollapsedState(animated: Boolean) {
-        if (animated) {
-            collapseButtons()
-        } else {
-            setButtonsVisibility(View.GONE)
-            // 直接設置位移確保位置正確（雖然 GONE 了，但 expand 時動畫起始點需要正確）
-            val step = 49.dpToPx().toFloat()
-            binding.chatButton.translationY = -step
-            binding.recordButton.translationY = -step * 2
-            binding.muteButton.translationX = step
-            binding.bluetoothButton.translationX = step * 2
-            binding.effectsMenuButton.translationX = step * 3
-            binding.cameraSettingButton.translationX = step * 4
-            binding.blackScreenButton.translationX = step * 5
-            
-            binding.chatButton.alpha = 0f
-            binding.recordButton.alpha = 0f
-            binding.muteButton.alpha = 0f
-            binding.bluetoothButton.alpha = 0f
-            binding.effectsMenuButton.alpha = 0f
-            binding.cameraSettingButton.alpha = 0f
-            binding.blackScreenButton.alpha = 0f
-            
-            binding.chatButton.scaleX = 0f
-            binding.chatButton.scaleY = 0f
-            binding.recordButton.scaleX = 0f
-            binding.recordButton.scaleY = 0f
-            // ...以此類推，但 GONE 已經足夠隱藏
-        }
+    private fun applyButtonsCollapsedState() {
+        setButtonsVisible(false)
+        // 直接設置位移確保位置正確（雖然 GONE 了，但 expand 時動畫起始點需要正確）
+        val step = 49.dpToPx().toFloat()
+        binding.chatButton.translationY = -step
+        binding.recordButton.translationY = -step * 2
+        binding.muteButton.translationX = step
+        binding.bluetoothButton.translationX = step * 2
+        binding.effectsMenuButton.translationX = step * 3
+        binding.cameraSettingButton.translationX = step * 4
+        binding.blackScreenButton.translationX = step * 5
+        
+        binding.chatButton.alpha = 0f
+        binding.recordButton.alpha = 0f
+        binding.muteButton.alpha = 0f
+        binding.bluetoothButton.alpha = 0f
+        binding.effectsMenuButton.alpha = 0f
+        binding.cameraSettingButton.alpha = 0f
+        binding.blackScreenButton.alpha = 0f
     }
 
-    private fun setButtonsVisibility(visibility: Int) {
-        binding.chatButton.visibility = visibility
-        binding.recordButton.visibility = visibility
-        binding.muteButton.visibility = visibility
-        binding.bluetoothButton.visibility = visibility
-        binding.effectsMenuButton.visibility = visibility
-        binding.cameraSettingButton.visibility = visibility
-        binding.blackScreenButton.visibility = visibility
+    private fun setButtonsVisible(visible: Boolean) {
+        binding.chatButton.isVisible = visible
+        binding.recordButton.isVisible = visible
+        binding.muteButton.isVisible = visible
+        binding.bluetoothButton.isVisible = visible
+        binding.effectsMenuButton.isVisible = visible
+        binding.cameraSettingButton.isVisible = visible
+        binding.blackScreenButton.isVisible = visible
     }
 
     private fun hideAllButtons() {
         // 隱藏右上角按鈕容器
-        binding.uploadSpeedOverlay.visibility = View.GONE
-        binding.rotationOverlay.visibility = View.GONE
-        binding.topRightButtonContainer.visibility = View.GONE
-        binding.batteryOverlay.visibility = View.GONE
-        binding.shakeLevelOverlay.visibility = View.GONE
+        binding.uploadSpeedOverlay.isVisible = false
+        binding.rotationOverlay.isVisible = false
+        binding.topRightButtonContainer.isVisible = false
+        binding.batteryOverlay.isVisible = false
+        binding.shakeLevelOverlay.isVisible = false
 
         // 隱藏隱藏式選單容器
-        binding.hiddenMenusContainer.visibility = View.GONE
-        binding.hiddenEffectControls.visibility = View.GONE
-        binding.hiddenCameraControls.visibility = View.GONE
+        binding.hiddenMenusContainer.isVisible = false
+        binding.hiddenEffectControls.isVisible = false
+        binding.hiddenCameraControls.isVisible = false
 
         // 隱藏右下角所有控制按鈕（包含直播按鈕、切換鏡頭等）
         binding.blackScreenButton.background = null
@@ -1885,21 +1857,21 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         binding.liveButton.alpha = 0f
 
         // 隱藏觀看人數容器（完全隱藏，不佔空間）
-        binding.viewerCountLayout.visibility = View.GONE
-        binding.uptimeText.visibility = View.GONE
+        binding.viewerCountLayout.isVisible = false
+        binding.uptimeText.isVisible = false
 
         // 隱藏訊號強度 Overlay
-        binding.networkSignalOverlay.visibility = View.GONE
+        binding.networkSignalOverlay.isVisible = false
 
-        binding.audioLevelOverlay.visibility = View.GONE
+        binding.audioLevelOverlay.isVisible = false
     }
 
     private fun restoreAllButtons() {
         // 顯示右上角按鈕容器
-        binding.topRightButtonContainer.visibility = View.VISIBLE
+        binding.topRightButtonContainer.isVisible = true
         
         // 顯示選單容器 (具體選單由 visibility 狀態決定)
-        binding.hiddenMenusContainer.visibility = View.VISIBLE
+        binding.hiddenMenusContainer.isVisible = true
 
         // 恢復右下角所有控制按鈕
         binding.blackScreenButton.background = ContextCompat.getDrawable(this, R.drawable.control_button_bg)
@@ -1975,20 +1947,13 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
         // 恢復觀看人數容器：根據當前人數決定是否顯示
         val viewerCount = binding.viewerCountText.text.toString().toIntOrNull() ?: 0
-        if (viewerCount > 0 && streamStartTime != null) {
-            binding.viewerCountLayout.visibility = View.VISIBLE
-        } else {
-            binding.viewerCountLayout.visibility = View.GONE
-        }
+        binding.viewerCountLayout.isVisible = viewerCount > 0 && streamStartTime != null
+        
         // 恢復時長：若直播正在進行，則顯示
-        if (streamStartTime != null) {
-            binding.uptimeText.visibility = View.VISIBLE
-        } else {
-            binding.uptimeText.visibility = View.GONE
-        }
+        binding.uptimeText.isVisible = streamStartTime != null
 
         // 網路訊號與電池 Overlay 將由 updateOverlayVisibility 統一處理
-        binding.audioLevelOverlay.visibility = View.VISIBLE
+        binding.audioLevelOverlay.isVisible = true
         // 監聽 ViewModel 的數據更新，同步給 Overlay
         // 恢復 Overlay 可見性（根據偏好設定）
         updateOverlayVisibility()
@@ -2145,12 +2110,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onDestroy() {
         super.onDestroy()
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(serviceCommandReceiver)
+        unregisterReceiver(serviceCommandReceiver)
         prefs.unregisterOnSharedPreferenceChangeListener(this)
         try {
             networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }
-        } catch (e: Exception) {
-            Log.e(TAG, "NetworkCallback unregister error", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "NetworkCallback unregister error")
         }
         webSocket?.close(1000, "Activity destroyed")
         webSocket = null

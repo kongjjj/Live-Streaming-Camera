@@ -5,10 +5,6 @@ import android.content.Context
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -48,7 +44,7 @@ class EmoteManager(private val context: Context) {
     suspend fun loadGlobalEmotes(
         enable7tv: Boolean = true,
         enableBttv: Boolean = true,
-        enableFfz: Boolean = true
+        enableFfz: Boolean = true,
     ) = withContext(Dispatchers.IO) {
         globalEmotes.clear()
         if (enable7tv) globalEmotes.putAll(fetch7TVGlobal())
@@ -82,7 +78,7 @@ class EmoteManager(private val context: Context) {
      * 非同步載入圖片（供 Adapter 呼叫，返回 Drawable 或 null）
      */
     suspend fun loadImageDrawable(url: String): Drawable? = withContext(Dispatchers.IO) {
-        drawableCache.get(url)?.let { return@withContext it }
+        drawableCache[url]?.let { return@withContext it }
         try {
             val drawable = Glide.with(context)
                 .asDrawable()
@@ -91,15 +87,10 @@ class EmoteManager(private val context: Context) {
                 .get()
             drawable?.let { drawableCache.put(url, it) }
             drawable
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
-
-    /**
-     * 為保持相容性，保留 loadEmoteDrawable
-     */
-    suspend fun loadEmoteDrawable(url: String): Drawable? = loadImageDrawable(url)
 
     // ---------- 私有解析方法 ----------
     private fun parseTwitchEmotesTag(tag: String?, message: String): List<Triple<Int, Int, String>> {
@@ -114,7 +105,7 @@ class EmoteManager(private val context: Context) {
                 if (dashIdx < 0) return@forEach
                 val start = range.substring(0, dashIdx).toIntOrNull() ?: return@forEach
                 val end = range.substring(dashIdx + 1).toIntOrNull() ?: return@forEach
-                if (start <= end && end < message.length) {
+                if ((start <= end) && (end < message.length)) {
                     positions.add(Triple(start, end, url))
                 }
             }
@@ -177,7 +168,7 @@ class EmoteManager(private val context: Context) {
         try {
             val request = Request.Builder().url(url).build()
             client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) response.body?.string() else null
+                if (response.isSuccessful) response.body.string() else null
             }
         } catch (_: Exception) { null }
     }

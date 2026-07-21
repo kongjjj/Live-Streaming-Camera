@@ -8,12 +8,12 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.UUID
-import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 class YouTubeChatManager(
     private val httpClient: OkHttpClient,
     private val onNewMessages: (List<ChatMessage>) -> Unit,
-    private val onSystemMessage: (String) -> Unit
+    private val onSystemMessage: (String) -> Unit,
 ) {
     private var channelId: String? = null
     private var videoId: String? = null
@@ -74,16 +74,22 @@ class YouTubeChatManager(
 
         while (isRunning && scope.isActive) {
             try {
-                if (continuation == null || apiKey == null) break
+                if ((continuation == null) || (apiKey == null)) break
 
                 val url = "https://www.youtube.com/youtubei/v1/live_chat/get_live_chat?key=$apiKey"
                 val jsonBody = JSONObject().apply {
-                    put("context", JSONObject().apply {
-                        put("client", JSONObject().apply {
-                            put("clientName", "WEB")
-                            put("clientVersion", "2.20210622.10.00")
-                        })
-                    })
+                    put(
+                        "context",
+                        JSONObject().apply {
+                            put(
+                                "client",
+                                JSONObject().apply {
+                                    put("clientName", "WEB")
+                                    put("clientVersion", "2.20210622.10.00")
+                                },
+                            )
+                        },
+                    )
                     put("continuation", continuation)
                 }
 
@@ -96,12 +102,12 @@ class YouTubeChatManager(
                 val response = httpClient.newCall(request).execute()
                 if (!response.isSuccessful) {
                     Log.e(TAG, "YouTube get_live_chat failed: ${response.code}")
-                    delay(5000)
+                    delay(5.seconds)
                     continue
                 }
 
-                val body = response.body?.string() ?: ""
-                val jsonObj = JSONObject(body)
+                val body = response.body
+                val jsonObj = JSONObject(body.string())
                 
                 val continuationData = jsonObj.optJSONObject("continuationContents")?.optJSONObject("liveChatContinuation")
                 
@@ -148,13 +154,13 @@ class YouTubeChatManager(
                                         Log.d(TAG, "Badge $j: tooltip=$tooltip, iconType=$iconType")
 
                                         when {
-                                            iconType == "MODERATOR" || tooltip.contains("管理員") || tooltip.contains("Moderator") -> {
+                                            (iconType == "MODERATOR") || tooltip.contains("管理員") || tooltip.contains("Moderator") -> {
                                                 badges.add(Badge("moderator", "1", R.drawable.ic_youtubemod))
                                             }
-                                            iconType == "OWNER" || tooltip.contains("頻道擁有者") || tooltip.contains("Owner") -> {
+                                            (iconType == "OWNER") || tooltip.contains("頻道擁有者") || tooltip.contains("Owner") -> {
                                                 badges.add(Badge("broadcaster", "1", R.drawable.ic_badge_broadcaster))
                                             }
-                                            tooltip.contains("會員") || tooltip.contains("Member") || badgeObj?.has("customThumbnail") == true -> {
+                                            (tooltip.contains("會員")) || tooltip.contains("Member") || (badgeObj?.has("customThumbnail") == true) -> {
                                                 val customThumbnails = badgeObj?.optJSONObject("customThumbnail")?.optJSONArray("thumbnails")
                                                 val badgeUrl = customThumbnails?.optJSONObject(0)?.optString("url")
                                                 
@@ -168,15 +174,18 @@ class YouTubeChatManager(
                                     }
                                 }
 
-                                newMessages.add(ChatMessage(
-                                    id = id,
-                                    sender = author,
-                                    message = messageText,
-                                    color = "#FF0000",
-                                    timestamp = timestamp,
-                                    badges = badges,
-                                    segments = segments
-                                ))
+                                newMessages.add(
+                                    ChatMessage(
+                                        id = id,
+                                        sender = author,
+                                        message = messageText,
+                                        color = "#0ABAB5",
+                                        timestamp = timestamp,
+                                        badges = badges,
+                                        segments = segments,
+                                        isYouTube = true,
+                                    ),
+                                )
                             }
                         }
                     }
@@ -187,12 +196,12 @@ class YouTubeChatManager(
                     }
                 }
 
-                delay(5000)
+                delay(5.seconds)
 
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "YouTube poll error", e)
-                delay(5000)
+                Log.e(TAG, "YouTube poll error")
+                delay(5.seconds)
             }
         }
     }
@@ -216,10 +225,10 @@ class YouTubeChatManager(
             }
 
             // Fallback: search in HTML
-            val html = response.body?.string() ?: ""
+            val html = response.body.string()
             return Regex("\"videoId\":\"([^\"]+)\"").find(html)?.groupValues?.get(1)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to resolve Video ID from channel", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "Failed to resolve Video ID from channel")
             return null
         }
     }
@@ -240,7 +249,7 @@ class YouTubeChatManager(
                 return false
             }
 
-            val html = response.body?.string() ?: ""
+            val html = response.body.string()
             
             // Use RegEx as provided by the user
             apiKey = Regex("\"INNERTUBE_API_KEY\":\"([^\"]+)\"").find(html)?.groupValues?.get(1)
@@ -249,8 +258,8 @@ class YouTubeChatManager(
             Log.d(TAG, "Extracted API Key: ${apiKey != null}, Continuation: ${continuation != null}")
 
             return apiKey != null && continuation != null
-        } catch (e: Exception) {
-            Log.e(TAG, "Fetch initial data failed", e)
+        } catch (_: Exception) {
+            Log.e(TAG, "Fetch initial data failed")
             return false
         }
     }
