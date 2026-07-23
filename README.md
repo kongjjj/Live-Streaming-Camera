@@ -41,4 +41,4 @@
 可以在手機上開啟 GitHub 發行頁面，下載 .apk 檔案並安裝。 
 
 ## 我製作的其他程式
-- [Chat Overlay](https://github.com/kongjjj/Chat-Overlay)：一個Android透明聊天室overlay給直播使用。 Android Transparent Chat app for IRL streaming.  
+- [Chat Overlay](https://github.com/kongjjj/Chat-Overlay)：一個Android透明Youtube/Twitch聊天室overlay給直播使用。 Android Transparent Youtube/Twitch Chat viewer app for IRL streaming.  
