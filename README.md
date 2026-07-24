@@ -1,6 +1,6 @@
 <div align="center">
 <img src="app/src/main/res/mipmap-hdpi/ic_launcher_round.webp" width="108" height="108" alt="Kick Third-Party Emotes">
-# ![Live-Streaming-Camera](app/src/main/res/mipmap-hdpi/ic_launcher_round.webp) 
+
 <h1>Live Streaming Camera</h1>
 
 一個使用 [StreamPack boilerplate](https://github.com/ThibaultBee/StreamPack-boilerplate) 作底層製作的中文 Android/Twitch 直播程式。
