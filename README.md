@@ -1,5 +1,5 @@
 <div align="center">
-
+<img src="app/src/main/res/mipmap-hdpi/ic_launcher_round.webp" width="108" height="108" alt="Kick Third-Party Emotes">
 # ![Live-Streaming-Camera](app/src/main/res/mipmap-hdpi/ic_launcher_round.webp) 
 <h1>Live Streaming Camera</h1>
 
