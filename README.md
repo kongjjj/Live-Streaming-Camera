@@ -12,6 +12,8 @@
 [![Downloads](https://img.shields.io/github/downloads/kongjjj/Live-Streaming-Camera/total?label=Downloads&style=for-the-badge&color=lightgreen)](https://github.com/kongjjj/Live-Streaming-Camera/releases)
 </div>
 
+---
+
 ## 功能
 
 - ✔️ RTMP 推流直播，Twitch 直接推流。
