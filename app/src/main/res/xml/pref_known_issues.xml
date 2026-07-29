@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="版本更新 Ver.2.7.0">
+        <Preference
+            android:selectable="false"
+            android:title="修復按下通知欄回到程式時，直播會自動停止的問題。"
+            android:summary="修復通知欄按鈕沒反應的問題。" />
+    </PreferenceCategory>
     <PreferenceCategory android:title="版本更新 Ver.2.6.9">
         <Preference
             android:selectable="false"
