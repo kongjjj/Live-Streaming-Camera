@@ -364,7 +364,7 @@ class MainViewModel(
                 } catch (_: Exception) {
                     Log.e(TAG, "統計收集錯誤")
                 }
-                delay(1.seconds)
+                delay(2.seconds)
             }
         }
     }
@@ -539,9 +539,15 @@ class MainViewModel(
 
             val regulatorEnabled = prefs.getBoolean(srtRegulatorEnabledKey, false)
             if (endpointType != "srt" || !regulatorEnabled) {
+                // 僅在未啟用位元率調節器時，才手動設置目標位元率
                 delay(200.milliseconds)
-                videoStreamer?.videoEncoder?.bitrate = prefs.getInt(videoBitrateKey, 2000) * 1000
-                Log.d(TAG, "設置固定位元率: ${prefs.getInt(videoBitrateKey, 2000)}kbps")
+                val targetBitrate = prefs.getInt(videoBitrateKey, 2000) * 1000
+                videoStreamer?.videoEncoder?.let { encoder ->
+                    encoder.bitrate = targetBitrate
+                    Log.d(TAG, "設置固定位元率: ${targetBitrate / 1000}kbps")
+                }
+            } else {
+                Log.d(TAG, "SRT 位元率調節器已啟用，由調節器控制位元率")
             }
 
             true

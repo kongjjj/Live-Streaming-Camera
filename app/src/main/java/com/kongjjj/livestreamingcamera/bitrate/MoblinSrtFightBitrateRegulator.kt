@@ -5,7 +5,6 @@ import io.github.thibaultbee.srtdroid.core.models.Stats
 import io.github.thibaultbee.streampack.core.configuration.BitrateRegulatorConfig
 import io.github.thibaultbee.streampack.ext.srt.regulator.SrtBitrateRegulator
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Moblin SrtFight adaptive bitrate algorithm implementation.
@@ -311,13 +310,18 @@ class MoblinSrtFightBitrateRegulator(
         // Log.d(TAG, "Final bitrate: ${oldCurrentBitrate / 1000}k -> ${currentBitrate / 1000}k")
         
         // Apply bounds from configuration
-        currentBitrate = max(
-            min(currentBitrate, bitrateRegulatorConfig.videoBitrateRange.upper.toLong()),
-            max(
-                currentSettings.minimumBitrate,
-                bitrateRegulatorConfig.videoBitrateRange.lower.toLong()
-            )
+        val maxAllowed = bitrateRegulatorConfig.videoBitrateRange.upper.toLong()
+        val minAllowed = max(
+            currentSettings.minimumBitrate,
+            bitrateRegulatorConfig.videoBitrateRange.lower.toLong()
         )
+        
+        currentBitrate = currentBitrate.coerceIn(minAllowed, maxAllowed)
+        
+        // Also cap currentMaximumBitrate to prevent it from running away too far above targetBitrate
+        if (currentMaximumBitrate > maxAllowed * 1.5) {
+            currentMaximumBitrate = (maxAllowed * 1.5).toLong()
+        }
     }
 
     /**

@@ -33,7 +33,7 @@ class AudioLevelFlow {
                     val level = calculateAudioLevel(record, buffer)
                     _audioLevelFlow.emit(level)
                 }
-                delay(30.milliseconds)
+                delay(100.milliseconds)
             }
         }
     }

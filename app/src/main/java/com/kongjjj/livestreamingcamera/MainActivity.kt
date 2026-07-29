@@ -2,10 +2,7 @@ package com.kongjjj.livestreamingcamera
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraCharacteristics
@@ -176,27 +173,7 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
     // 網路監聽相關
     private var connectivityManager: ConnectivityManager? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
-    // 在 MainActivity 類別中新增
-    private val serviceCommandReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                MyPersistentService.ACTION_START_STREAM -> {
-                    if (viewModel.isStreamingLiveData.value != true) {
-                        lifecycleScope.launch { viewModel.startStream() }
-                    }
-                }
-                MyPersistentService.ACTION_STOP_STREAM -> {
-                    if (viewModel.isStreamingLiveData.value == true) {
-                        lifecycleScope.launch { viewModel.stopStream() }
-                    }
-                }
-                MyPersistentService.ACTION_EXIT_APP -> {
-                    finishAffinity()
-                    android.os.Process.killProcess(android.os.Process.myPid())
-                }
-            }
-        }
-    }
+
     private val streamerRequiredPermissions = mutableListOf(
         Manifest.permission.CAMERA,
         Manifest.permission.RECORD_AUDIO,
@@ -331,17 +308,33 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
             startPersistentService()
         }
 
+        // 監聽來自背景服務的 EventBus 事件
+        lifecycleScope.launch {
+            EventBus.events.collect { event ->
+                when (event) {
+                    is AppEvent.StartStream -> {
+                        if (viewModel.isStreamingLiveData.value != true) {
+                            viewModel.startStream()
+                        }
+                    }
+                    is AppEvent.StopStream -> {
+                        if (viewModel.isStreamingLiveData.value == true) {
+                            viewModel.stopStream()
+                        }
+                    }
+                    is AppEvent.ExitApp -> {
+                        finishAffinity()
+                        android.os.Process.killProcess(android.os.Process.myPid())
+                    }
+                    else -> {}
+                }
+            }
+        }
+
         // 移除獨立的通知權限請求，已整合至 permissionsManager
         // requestNotificationPermission()
         prefs.registerOnSharedPreferenceChangeListener(this)
 // 註冊服務命令接收器
-        val filter = IntentFilter().apply {
-            addAction(MyPersistentService.ACTION_START_STREAM)
-            addAction(MyPersistentService.ACTION_STOP_STREAM)
-            addAction(MyPersistentService.ACTION_EXIT_APP)
-        }
-        ContextCompat.registerReceiver(this, serviceCommandReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-
         viewModel.isStreamingLiveData.observe(this) { updateStatusText() }
         viewModel.isTryingConnectionLiveData.observe(this) { updateStatusText() }
         viewModel.bluetoothEnabled.observe(this) { updateBluetoothIcon(it) }
@@ -2110,7 +2103,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(serviceCommandReceiver)
         prefs.unregisterOnSharedPreferenceChangeListener(this)
         try {
             networkCallback?.let { connectivityManager?.unregisterNetworkCallback(it) }

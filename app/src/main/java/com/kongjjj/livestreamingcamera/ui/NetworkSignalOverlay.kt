@@ -61,7 +61,7 @@ class NetworkSignalOverlay @JvmOverloads constructor(
                 updateSignalStrengths()
                 updateActiveNetwork()
                 invalidate()
-                delay(2000.milliseconds)
+                delay(5000.milliseconds)
             }
         }
     }

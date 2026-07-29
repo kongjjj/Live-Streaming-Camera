@@ -40,7 +40,7 @@ class ShakeLevelOverlay @JvmOverloads constructor(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
         }
     }
 
